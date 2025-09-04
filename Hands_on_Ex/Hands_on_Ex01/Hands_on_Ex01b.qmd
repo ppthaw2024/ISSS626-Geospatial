@@ -1,5 +1,5 @@
 ---
-title: "Hands-on Exercise 1 Part 2: Thematic Mapping and GeoVisualisation with R"
+title: "Hands-on Exercise 01 Part 2: Thematic Mapping and GeoVisualisation with R"
 author: "Pwint Phoo Thaw"
 date-modified: "last-modified"
 execute:
