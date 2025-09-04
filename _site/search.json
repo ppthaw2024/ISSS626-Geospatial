@@ -1,0 +1,30 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "ISSS26 Geospatial Coursework",
+    "section": "",
+    "text": "Hello and \n\nI’m Phoo, an aspiring Business Analyst with a passion for turning data into meaningful insights and stories.\nThis is my Gepspatial Analytics and Applications showcase, where I document and share my coursework and projects for this module.\nHere, you’ll see how I apply data analytics techniques to explore data, draw meaningful insights, and reveal hidden trends that tell a bigger story. 📊✨\nTake a look around and enjoy the journey through data! 😊"
+  },
+  {
+    "objectID": "Hands_on_Ex/Hands_on_Ex01/Hands-on_Ex01.html",
+    "href": "Hands_on_Ex/Hands_on_Ex01/Hands-on_Ex01.html",
+    "title": "Hands-on Exercise 01: Geosptial Data Science with R",
+    "section": "",
+    "text": "Geospatial Data Science is a process of importing, wrangling, integrating, and processing geographically referenced data sets. In this hands-on exercise, how to perform geospatial data science tasks in R by using sf package will be learnt."
+  },
+  {
+    "objectID": "Hands_on_Ex/Hands_on_Ex01/Hands-on_Ex01.html#learning-outcome",
+    "href": "Hands_on_Ex/Hands_on_Ex01/Hands-on_Ex01.html#learning-outcome",
+    "title": "Hands-on Exercise 01: Geosptial Data Science with R",
+    "section": "",
+    "text": "Geospatial Data Science is a process of importing, wrangling, integrating, and processing geographically referenced data sets. In this hands-on exercise, how to perform geospatial data science tasks in R by using sf package will be learnt."
+  },
+  {
+    "objectID": "Hands_on_Ex/Hands_on_Ex01/Hands-on_Ex01.html#data-aquisition",
+    "href": "Hands_on_Ex/Hands_on_Ex01/Hands-on_Ex01.html#data-aquisition",
+    "title": "Hands-on Exercise 01: Geosptial Data Science with R",
+    "section": "1.2 Data Aquisition",
+    "text": "1.2 Data Aquisition"
+  }
+]
