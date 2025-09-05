@@ -1,0 +1,10 @@
+---
+title: "Hands-on Exercise 02: 2nd Order Spatial Point Patterns Analysis Methods"
+author: "Pwint Phoo Thaw"
+date-modified: "last-modified"
+execute:
+  echo: true
+  eva: true
+  warning: false
+  freeze: true
+---
