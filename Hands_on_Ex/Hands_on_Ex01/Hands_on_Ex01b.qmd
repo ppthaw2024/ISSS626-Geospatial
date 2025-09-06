@@ -428,6 +428,10 @@ In **tmap**, small multiple maps can be plotted in three ways:
 In this example, small multiple choropleth maps are created by assigning two variables to the visual variable (i.e. fill).
 
 ```{r}
+
+## using yml line for increase the size
+#| fig-width: 12
+
 tm_shape(mpsz_pop2024) + 
   tm_polygons(
     fill = c("YOUNG", "AGED"),
