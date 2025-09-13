@@ -1,0 +1,115 @@
+---
+title: "In-class Exercise 3b: ACRA"
+author: "Pwint Phoo Thaw"
+date: "September 12, 2025"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: true
+---
+
+```{r}
+pacman::p_load(sf,tidyverse,
+               tmap, httr)
+```
+
+**Importing ACRA Data**
+
+```{r}
+folder_path <- "data/aspatial/acra"
+file_list <- list.files(path=folder_path,
+                        pattern = "^ACRA*.*\\.csv$",
+                        full.names = TRUE)
+
+acra_data <- file_list %>%
+  map_dfr(read_csv)
+```
+
+**Saving ACRA data**
+
+```{r}
+write_rds(acra_data,
+          "data/rds/acra_data.rds")  ##makesure to use underscore write
+
+```
+
+**Tidying ACRA data (56111 is for restaurants)**
+
+```{r}
+### select target businesess, derive year, tidy postal code for geo coding and...
+
+biz_56111 <- acra_data %>%
+  select(1:24) %>%
+  filter(primary_ssic_code == 56111) %>%
+  rename(date = registration_incorporation_date) %>%  ###rename long name of reg date
+  mutate(date = as.Date(date),
+         YEAR = year(date),
+         MONTH_NUM = month(date), # for sttv purpose
+         MONTH_ABBR = month(date,
+                           label = TRUE,
+                           abbr = TRUE)) %>% ###from hands_on 4, need to provide month in numerical form, visualization purpose
+  mutate(
+    postal_code = str_pad(postal_code,
+    width = 6, side = "left", pad = "0")) %>% ###alawys 6 digits for SG, 5 digits for chinatown area and have to fill 0, must make sure character field
+          filter(YEAR == 2025)
+
+
+### need to continue with filering until June based on Problem statement
+```
+
+**Geocoding (for finding X,Y coordinates)**
+
+```{r}
+postcodes <- unique(biz_56111$postal_code)
+
+url <- "https://onemap.gov.sg/api/common/elastic/search"  ##API without paying
+
+found <- data.frame()
+not_found <- data.frame(postcode = character())
+
+for (pc in postcodes) {
+  query <- list(
+    searchVal = pc,
+    returnGeom = "Y",
+    getAddrDetails = "Y",
+    pageNum = "1"
+  )
+
+###converting to data frame
+res <- GET(url, query = query)
+json <- content(res)
+
+if (json$found != 0) {
+  df <- as.data.frame(json$results, stringsAsFactors = FALSE)
+  df$input_postcode <- pc
+  found <- bind_rows(found, df)
+  } else {
+  not_found <- bind_rows(not_found, data.frame(postcode = pc))
+  }
+}
+
+  
+
+
+```
+
+Appending the location information (join it back with 56111 right one with new geo_coded postal_code
+
+2 columns in meter, 2 columns in Lon and Lat
+
+```{r}
+biz_56111 = biz_56111 %>%
+   left_join(found,
+             by = c('postal_code' = 'POSTAL'))
+```
+
+**Converting into SF data frame**
+
+```{r}
+biz_56111_sf <- st_as_sf(biz_56111,
+                         coords = c("X", "Y"),
+                         crs = 3414)
+
+```
