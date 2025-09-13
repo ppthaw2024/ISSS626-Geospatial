@@ -20,10 +20,10 @@ website:
        
        
      
-    - text: "In-class Exercise"
+    - text: "In-Class Exercise"
       menu:
-      - text: "In-class Exercise 1"
-        href: In-class_Ex1.html
+      - text: "In-Class Exercise 3a"
+        href: In_Class_Ex/In_class_Ex03/In-class_Ex03a.html
       
     - text: "Take-home Exercise"
       menu:
