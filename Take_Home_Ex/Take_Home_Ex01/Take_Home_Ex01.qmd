@@ -1,0 +1,13 @@
+---
+title: "Take-Home Exercise 1: Interactive K-functionGeospatial Analytics for Public Good"
+author: "Pwint Phoo Thaw"
+date: "September 12, 2025"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: true
+---
+
+testing testing

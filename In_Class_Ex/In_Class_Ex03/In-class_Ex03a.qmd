@@ -1,6 +1,6 @@
 ---
 title: "In-class Exercise 3: Interactive K-function"
-author: "Dr. Kam Tin Seong"
+author: "Pwint Phoo Thaw"
 date: "September 12, 2025"
 date-modified: "last-modified"
 execute: 

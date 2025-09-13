@@ -6,8 +6,10 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
+<meta name="author" content="Pwint Phoo Thaw">
+<meta name="dcterms.date" content="2025-09-12">
 
-<title>ISSS26 Geospatial Coursework</title>
+<title>Take-Home Exercise 1: Interactive K-functionGeospatial Analytics for Public Good – ISSS26 Geospatial Coursework</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -23,22 +25,22 @@ ul.task-list li input[type="checkbox"] {
 </style>
 
 
-<script src="site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="site_libs/quarto-nav/headroom.min.js"></script>
-<script src="site_libs/clipboard/clipboard.min.js"></script>
-<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
-<script src="site_libs/quarto-search/fuse.min.js"></script>
-<script src="site_libs/quarto-search/quarto-search.js"></script>
-<meta name="quarto:offset" content="./">
-<script src="site_libs/quarto-html/quarto.js"></script>
-<script src="site_libs/quarto-html/popper.min.js"></script>
-<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="site_libs/quarto-html/anchor.min.js"></script>
-<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-549806ee2085284f45b00abea8c6df48.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-ddd961a2510921635943dfbbd19534c4.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-549806ee2085284f45b00abea8c6df48.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-ddd961a2510921635943dfbbd19534c4.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -68,7 +70,7 @@ ul.task-list li input[type="checkbox"] {
 }</script>
 
 
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="../../styles.css">
 </head>
 
 <body class="nav-fixed">
@@ -78,7 +80,7 @@ ul.task-list li input[type="checkbox"] {
     <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
-    <a class="navbar-brand" href="./index.html">
+    <a class="navbar-brand" href="../../index.html">
     <span class="navbar-title">ISSS26 Geospatial Coursework</span>
     </a>
   </div>
@@ -94,23 +96,23 @@ ul.task-list li input[type="checkbox"] {
     </a>
     <ul class="dropdown-menu" aria-labelledby="nav-menu-hands-on-exercise">    
         <li>
-    <a class="dropdown-item" href="./Hands_on_Ex/Hands_on_Ex01/Hands-on_Ex01.html">
+    <a class="dropdown-item" href="../../Hands_on_Ex/Hands_on_Ex01/Hands-on_Ex01.html">
  <span class="dropdown-text">Hands-on Exercise 1</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./Hands_on_Ex/Hands_on_Ex01/Hands_on_Ex01b.html">
+    <a class="dropdown-item" href="../../Hands_on_Ex/Hands_on_Ex01/Hands_on_Ex01b.html">
  <span class="dropdown-text">Hands-on Exercise 1 Part 2</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./Hands_on_Ex/Hands_on_Ex02/Hands_on_Ex02.html">
+    <a class="dropdown-item" href="../../Hands_on_Ex/Hands_on_Ex02/Hands_on_Ex02.html">
  <span class="dropdown-text">Hands-on Exercise 2</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./Hands_on_Ex/Hands_on_Ex02/Hands_on_Ex02b.html">
+    <a class="dropdown-item" href="../../Hands_on_Ex/Hands_on_Ex02/Hands_on_Ex02b.html">
  <span class="dropdown-text">Hands-on Exercise 2 Part 2</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./Hands_on_Ex/Hands_on_Ex03/Hands_on_Ex03.html">
+    <a class="dropdown-item" href="../../Hands_on_Ex/Hands_on_Ex03/Hands_on_Ex03.html">
  <span class="dropdown-text">Hands-on Exercise 3</span></a>
   </li>  
     </ul>
@@ -121,7 +123,7 @@ ul.task-list li input[type="checkbox"] {
     </a>
     <ul class="dropdown-menu" aria-labelledby="nav-menu-in-class-exercise">    
         <li>
-    <a class="dropdown-item" href="./In_Class_Ex/In_class_Ex03/In-class_Ex03a.html">
+    <a class="dropdown-item" href="../../In_Class_Ex/In_class_Ex03/In-class_Ex03a.html">
  <span class="dropdown-text">In-Class Exercise 3a</span></a>
   </li>  
     </ul>
@@ -132,7 +134,7 @@ ul.task-list li input[type="checkbox"] {
     </a>
     <ul class="dropdown-menu" aria-labelledby="nav-menu-take-home-exercise">    
         <li>
-    <a class="dropdown-item" href="./Take_Home_Ex/Take_Home_Ex01/Take_Home_Ex01.html">
+    <a class="dropdown-item" href="../../Take_Home_Ex/Take_Home_Ex01/Take_Home_Ex01.html">
  <span class="dropdown-text">Take-home Exercise 1</span></a>
   </li>  
     </ul>
@@ -140,11 +142,11 @@ ul.task-list li input[type="checkbox"] {
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item">
-    <a class="nav-link active" href="./index.html" aria-current="page"> 
+    <a class="nav-link" href="../../index.html"> 
 <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./about.html"> 
+    <a class="nav-link" href="../../about.html"> 
 <span class="menu-text">About</span></a>
   </li>  
 </ul>
@@ -158,31 +160,52 @@ ul.task-list li input[type="checkbox"] {
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        <nav id="TOC" role="doc-toc" class="toc-active">
-    <h2 id="toc-title">On this page</h2>
-   
-  <ul>
-  <li><a href="#hello-and" id="toc-hello-and" class="nav-link active" data-scroll-target="#hello-and"><strong>Hello and</strong> <img src="images/anh-dong-welcome-cute-de-thuong_075923337.gif" width="76" height="76"></a></li>
-  </ul>
-</nav>
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+        
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"></header>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Take-Home Exercise 1: Interactive K-functionGeospatial Analytics for Public Good</h1>
+</div>
 
 
 
+<div class="quarto-title-meta">
 
-<section id="hello-and" class="level3">
-<h3 class="anchored" data-anchor-id="hello-and"><strong>Hello and</strong> <img src="images/anh-dong-welcome-cute-de-thuong_075923337.gif" width="76" height="76"></h3>
-<p><img src="images/Ghibli_GeoBackground.png" class="img-fluid"></p>
-<p><strong>My name is Phoo</strong>, an aspiring Business Analyst with a strong interest in transforming data into actionable insights and meaningful stories.</p>
-<p>This is my <strong>Geospatial Data Science and Analytics</strong> showcase, where I document and share my coursework and projects from this module.</p>
-<p>In this space, I explore how geospatial analytics can answer real-world questions—such as where to locate new business outlets, what factors influence HDB resale prices, and how economic or service activities cluster or disperse across Singapore. <strong>By applying methods like spatial data wrangling, geoprocessing, geospatial statistics, and machine learning, I uncover patterns and processes that support better decision-making.</strong></p>
-<p>Take a look around and join me on this journey through data and geography! 🌍😊✨</p>
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Pwint Phoo Thaw </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">September 12, 2025</p>
+    </div>
+  </div>
+  
+    <div>
+    <div class="quarto-title-meta-heading">Modified</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date-modified">September 13, 2025</p>
+    </div>
+  </div>
+    
+  </div>
+  
 
 
-</section>
+</header>
+
+
+<p>testing testing</p>
+
+
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
