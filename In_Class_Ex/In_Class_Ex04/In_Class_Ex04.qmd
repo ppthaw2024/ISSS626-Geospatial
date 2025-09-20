@@ -1,0 +1,156 @@
+---
+title: "In-class Exercise 4: Spatial Weight"
+author: "Pwint Phoo Thaw"
+date: "September 12, 2025"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: true
+---
+
+```{r}
+pacman::p_load(sf, ggstatsplot, tmap, tidyverse, knitr, GWmodel)
+
+```
+
+### Data Preparation
+
+The code chunk below uses [*st_read()*](https://r-spatial.github.io/sf/reference/st_read.html) of **sf** package to import Hunan shapefile into R. The imported shapefile will be **simple features** Object of **sf**.
+
+```{r}
+hunan_sf <- st_read(dsn = "data/geospatial", 
+                 layer = "Hunan")
+```
+
+```{r}
+#| echo: false
+glimpse(hunan_sf)
+
+```
+
+Next, we will import *Hunan_2012.csv* into R by using *read_csv()* of **readr** package. The output is R dataframe class.
+
+```{r}
+hunan2012 <- read_csv("data/aspatial/Hunan_2012.csv")
+```
+
+```{r}
+#| echo: false
+glimpse(hunan2012)
+
+
+```
+
+```{r}
+hunan_sf <- left_join(hunan_sf, hunan2012) %>%
+  select(1:3, 7, 15, 16, 31, 32)
+
+
+```
+
+```{r}
+hunan_sp <- hunan_sf %>%  
+  as_Spatial()
+```
+
+#### Geographical analytics solution
+
+#### Cross Validation
+
+```{r}
+bw_CV <- bw.gwr(GDPPC ~ 1,
+                data = hunan_sp,
+                approach = "CV",
+                adaptive = FALSE,
+                kernel = "bisquare",
+                longlat = T)
+
+bw_CV
+
+#better way than looking at Maximum
+
+
+```
+
+#### AIC
+
+```{r}
+bw_AIC <- bw.gwr(GDPPC ~ 1,
+                data = hunan_sp,
+                approach = "AIC",
+                adaptive = FALSE,
+                kernel = "bisquare",
+                longlat = T)
+
+bw_AIC
+#The result 160.5517 in Kilometer
+```
+
+#### Summary Statistics
+
+```{r}
+#with CV
+gwstat_CV <- gwss(data = hunan_sp,
+               vars = "GDPPC",
+               bw = bw_CV,
+               kernel = "bisquare",
+               adaptive = FALSE,
+               longlat = T)
+
+```
+
+```{r}
+#with AIC
+gwstat <- gwss(data = hunan_sp,
+               vars = "GDPPC",
+               bw = bw_AIC,
+               kernel = "bisquare",
+               adaptive = FALSE,
+               longlat = T)
+
+```
+
+#### Extracting SDF data table from gwss object output from gwss()
+
+```{r}
+gwstat_df <- as.data.frame(gwstat$SDF)
+```
+
+####  Combine with Hunan data
+
+```{r}
+hunan_gstat <- cbind(hunan_sf,gwstat_df)
+#doing column append from gwstat_df to hunan_sf
+#use cbind when joining table without unique identifier, only when row sequence are the same
+
+```
+
+```{r}
+basemap <- tm_shape(hunan_gstat) +
+  tm_polygons() +
+  tm_text("NAME_3", size=0.5)
+
+gdppc <- qtm(hunan_gstat, "GDPPC") +
+  tm_layout(
+    legend.position = c("left", "bottom"))
+tmap_arrange(basemap, gdppc, asp=1, ncol=2)
+```
+
+## **Visualising geographically weighted summary statistics**
+
+```{r}
+tm_shape(hunan_gstat) +
+  tm_fill("GDPPC_LM",
+          n = 5,
+          style = "quantile") +
+  tm_borders(alpha = 0.5) +
+  tm_layout(main.title = "Distribution of geographically weighted mean",
+            main.title.position = "center",
+            main.title.size = 1.8,
+            legend.text.size = 1.2,
+            legend.height = 1.50,
+            legend.width = 1.50,
+            frame = TRUE)
+```
