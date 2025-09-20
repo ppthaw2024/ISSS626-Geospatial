@@ -59,6 +59,24 @@ biz_56111 <- acra_data %>%
 ### need to continue with filering until June based on Problem statement
 ```
 
+```{r}
+
+#|eval:false
+#|echo:false
+write_rds(biz_56111,
+"data/rds/biz_5611.rds")
+```
+
+```{r}
+biz_56111 <-
+read_rds("data/rds/biz_5611.rds")
+
+par(mar = c(4, 4, 2, 1))   # set smaller margins
+##plot(biz_56111)
+##have to fix above code
+
+```
+
 **Geocoding (for finding X,Y coordinates)**
 
 ```{r}
