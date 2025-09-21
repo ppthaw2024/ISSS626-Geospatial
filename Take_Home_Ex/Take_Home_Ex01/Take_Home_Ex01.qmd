@@ -1,5 +1,5 @@
 ---
-title: "Take-Home Exercise 1: The Influx of Chinese Bubble Tea Brands in Singapore: A Spatio-Temporal Geospatial Analysis (2024–2025)"
+title: "Take-Home Exercise 1: Hotspots on the Go: Clustering of Food Kiosks Across Singapore, 2024–Jun 2025"
 author: "Pwint Phoo Thaw"
 date: "September 12, 2025"
 date-modified: "last-modified"
@@ -12,28 +12,20 @@ execute:
 
 # **Problem Statement**
 
-Between **2024 and mid-2025**, Singapore has experienced an influx of **popular Chinese bubble tea brands** such as *Mixue, HEYTEA, and Chagee*. These entrants are competing directly with established Taiwanese and local players (*KOI, LiHo, Gong Cha*), reshaping the city’s retail food and beverage landscape.
-
-Understanding where these Chinese brands are locating, when they enter, and how they interact with existing bubble tea ecosystems is crucial for urban retail planning, zoning policies, and SME competitiveness.
-
-This study applies geospatial analytics to uncover the **spatial clustering, temporal waves of entry, and proximity to key infrastructure (MRTs, malls, schools)** of Chinese bubble tea shops, compared against incumbents. The findings will inform **planning authorities, mall operators, and policy makers** on how foreign retail entrants shape Singapore’s urban form and consumer spaces.
+From **Jan 2024 to Jun 2025**, Singapore saw rapid growth of **food kiosks (SSIC 56123)**—small, takeaway-focused outlets with little or no seating. Their expansion around **MRT nodes, malls, schools, offices, and HDB towns** can reshape micro-retail patterns, affect pedestrian space and curb logistics, and create pockets of under- or over-supply. This study uses ACRA registrations to reveal **where** and **when** kiosks emerge, how strongly they **cluster**, how activity **evolves over time**, and how locations relate to key **urban infrastructure**, to inform **evidence-based retail and land-use planning** in Singapore.
 
 ## **1. Objectives**
 
 -   **Map Spatio-Temporal Distribution**\
-    Track when and where Chinese bubble tea brands entered (2024–Jun 2025), and compare hotspots with existing players.
-
--   **Assess Clustering & Competition**\
-    Use spatial statistics (KDE, Ripley’s K, Cross-K) to test clustering and co-location with incumbents.
-
+    Track when and where new 56123 kiosks entered (2024–Jun 2025) and highlight hotspot areas by month and subzone.
+-   **Assess Clustering \***\
+    Use spatial statistics (KDE, Ripley’s K/L or O-ring) to test whether kiosks are clustered or dispersed and at what spatial scales.
 -   **Identify Temporal Waves**\
-    Apply spatio-temporal KDE (STKDE) to reveal expansion waves from CBD to heartlands.
-
--   **Examine Infrastructure Proximity**\
-    Test whether outlets concentrate near MRTs, malls, and schools.
-
--   **Derive Policy Insights**\
-    Translate findings into implications for retail zoning, transit-oriented planning, and SME support.
+    Apply spatio-temporal KDE (STKDE) to reveal waves of kiosk entry (e.g., CBD/malls first, then diffusion to heartlands).
+-   **Examine Infrastructure Proximity \***\
+    Test whether kiosks concentrate near **MRT stations, malls, and schools** (buffer analysis; simple statistical tests).
+-   **Derive Planning Insights**\
+    Translate findings into implications for **zoning/tenant-mix**, **transit-oriented clustering management**, curb/logistics planning, and **SME support**.
 
 ## **2. Data Wrangling**
 
@@ -44,7 +36,7 @@ pacman::p_load(readr, dplyr, tidyr, stringr, lubridate,terra,spatstat,
 
 ```
 
-**2.1 Importing ACRA Data (Aspatial)**
+### **2.1 Importing ACRA Data (Aspatial)**
 
 ```{r}
 folder_path <- "data/aspatial/acra"
@@ -90,18 +82,9 @@ write_rds(biz_56123,
 ```
 
 ```{r}
+
 biz_56123 <-
 read_rds("data/rds/biz_56123.rds")
-
-
-
-```
-
-```{r}
-#biz_56123 <- read_rds("data/rds/biz_56123.rds")
-
-#par(mar = c(4, 4, 2, 1))  # set smaller margins
-# plot(biz_56123)  # uncomment if it's an sf object and you want a quick plot
 
 ```
 
@@ -144,10 +127,6 @@ found <- found %>%
   select(1:10)
 ```
 
-```{r}
-
-```
-
 Appending the location information (join it back with 56123 right one with new geo_coded postal_code
 
 2 columns in meter, 2 columns in Lon and Lat
@@ -165,6 +144,7 @@ write_rds(biz_56123_join, "data/rds/biz_56123_join.rds")
 **Converting into SF data frame**
 
 ```{r}
+
 biz_56123_sf <- st_as_sf(biz_56123_join, 
                          coords = c("X","Y"),
                          crs=3414) 
@@ -196,7 +176,7 @@ biz_56123_sf %>% select(street_raw, Zone) %>% head()
 write_rds(biz_56123_sf, "data/rds/biz_56123_sf.rds")
 ```
 
-**2.2 Importing Geospatial Data**
+### **2.2 Importing Geospatial Data**
 
 ```{r}
 mpsz_sf <- st_read("data/geospatial/MasterPlan2019SubzoneBoundaryNoSeaKML.kml") %>%
@@ -248,23 +228,57 @@ write_rds(mpsz_cl,
 st_crs(mpsz_cl) == st_crs(biz_56123_sf)
 ```
 
+#### **Mapping the geospatial data sets**
+
 ```{r}
 ggplot() +
   geom_sf(data = mpsz_cl, fill = "gray", color = "black", size = 0.2) +
   geom_sf(data = biz_56123_sf, color = "black", size = 1.2, alpha = 0.7) +
-  labs(title = "Food kiosks Across Singapore Subzones",
+  labs(title = "Food Kiosks Across Singapore Subzones",
        subtitle = "All layers aligned to EPSG:3414 (SVY21)",
        caption = "Source: URA Master Plan & Data.gov.sg") +
   theme_minimal()
 ```
 
-**2.3 Joining ARCA data and Geospatial data**
+### **2.3 Importing MRT Data**
+
+```{r}
+mrt <- st_read("data/geospatial/LTAMRTStationExitKML.kml") %>%
+  st_transform(crs = 3414)
+```
+
+```{r}
+#|eval:false
+#|echo:false
+write_rds(mrt,
+"data/rds/mrt.rds")
+
+```
+
+```{r}
+mrt<-
+read_rds("data/rds/mrt.rds")
+```
+
+#### **Mapping the geospatial data sets**
+
+```{r}
+ggplot() +
+  geom_sf(data = mpsz_cl, fill = "gray", color = "black", size = 0.2) +
+  geom_sf(data = mrt, color = "green", size = 1.2, alpha = 0.7) +
+  labs(title = "MRT Exit Across Singapore Subzones",
+       subtitle = "All layers aligned to EPSG:3414 (SVY21)",
+       caption = "Source: URA Master Plan & Data.gov.sg") +
+  theme_minimal()
+```
+
+### **2.4 Joining ARCA data and Geospatial data**
 
 ```{r}
 #####will do later
 ```
 
-**Objective 1:**
+## **3 Objective: Clustering Analysis**
 
 ```{r}
 biz_56123_ppp <- as.ppp(biz_56123_sf)
@@ -279,7 +293,7 @@ class(biz_56123_ppp)
 summary(biz_56123_ppp)
 ```
 
-#### **Creating *owin* object and combining point events**
+### **Creating *owin* object and combining point events**
 
 ```{r}
 sg_owin <- as.owin(mpsz_cl)
@@ -290,7 +304,7 @@ class(sg_owin)
 biz56123_sg_ppp = biz_56123_ppp [sg_owin]
 ```
 
-#### **Clark-Evan Test for Nearest Neighbour Analysis**
+#### **3.1aClark-Evan Test without CSR for Nearest Neighbour Analysis**
 
 ```{r}
 clarkevans.test(biz56123_sg_ppp,
@@ -299,8 +313,80 @@ clarkevans.test(biz56123_sg_ppp,
                 alternative=c("clustered"))
 ```
 
-### **1) Statistical conclusion**
+#### **Statistical conclusion**
 
 -   The test statistic **R = 0.514** (well **below 1**) and the **p-value \< 2.2e-16**.
 
--   Translation: the food kioks locations are **much closer together than we’d expect by random chance**—i.e., they are **strongly clustered**, not evenly spread out.
+    The food kioks locations are **much closer together than we’d expect by random chance**—i.e., they are **strongly clustered**, not evenly spread out.
+
+#### **3.1bClark-Evan Test with CSR for Nearest Neighbour Analysis**
+
+```{r}
+clarkevans.test(biz56123_sg_ppp,
+                correction="none",
+                clipregion="sg_owin",
+                alternative=c("clustered"),
+                method="MonteCarlo",
+                nsim=99)
+
+```
+
+#### **Statistical conclusion**
+
+-   Clark–Evans NN test: **R = 0.514** (well below 1), **p \< 2.2×10⁻¹⁶** → reject CSR; locations are **significantly clustered**.
+
+    Food kiosks are **much closer together** than random—i.e., **strongly clustered**, not evenly spread across Singapore.
+
+#### **3.2 Kernel Density Method**
+
+```{r}
+biz56123sg_ppp_km <- rescale.ppp(biz56123_sg_ppp, 1000, "km")
+```
+
+```{r}
+kde_biz56123_km <- density(biz56123sg_ppp_km,
+                              sigma=bw.diggle,
+                              edge=TRUE,
+                              kernel="gaussian")
+```
+
+```{r}
+plot(kde_biz56123_km)
+```
+
+```{r}
+summary(kde_biz56123_km)
+```
+
+#### Statistical Takeaways
+
+-   The **integral ≈ 482.3** matches the number of kiosks → diagnostic check passed (KDE surface conserves counts).
+
+<!-- -->
+
+-    The **mean intensity ≈ 7.2×10⁻⁷ per m²** ≈ **0.72 kiosks per km²** on average over the study window—so most of Singapore is low-intensity with a few concentrated pockets.
+
+<!-- -->
+
+-   **Mean intensity:** **0.720 kiosks/km²** → the island-wide baseline is low; activity is concentrated in a few places.
+
+<!-- -->
+
+-    **Peak intensity:** **\~91.5 kiosks/km²** → very small areas achieve extremely high density, confirming **tight hotspots**.
+
+-   Hotspots align with **MRT interchanges, mall corridors, CBD/town centres**; peripheral/industrial/green areas are cold.
+
+**Business Communications**
+
+-   **Retail gravity rules**: kiosks concentrate where **footfall and delivery access** are highest (CBD/malls/interchanges).
+
+<!-- -->
+
+-    **Saturation risk**: the same nodes show **over-concentration**—new kiosks here will face **tight competition and cannibalisation**.
+
+<!-- -->
+
+-    **Opportunity**: identify **underserved subzones** (low KDE but reasonable demand/transport) as candidate areas for **decentralised growth**.
+
+
+## **4 Objective: Examine Infrastructure Proximity**
