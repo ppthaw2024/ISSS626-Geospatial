@@ -596,7 +596,7 @@ plot(G_SBW.csr)
 ***Pairwise L Function(Sembawang, Ang Mo Kio & Bishan, Punggol & Sengkang, Downtown Core, Jurong West & Jurong East)***
 
 ```{r}
-#|eval:false
+
 
 L_sbw= Lest(biz56123_sbw_ppp, correction = "Ripley")
 L_amk_bs= Lest(biz56123_amk_bs_ppp, correction = "Ripley")
@@ -726,6 +726,14 @@ p  # print the plotly object
 
 ```
 
+**Insights:**
+
+-   The black curve **L(r)−r is \> 0** across the whole range → kiosks are **not** evenly spaced; they aggregate.
+
+-   **Statistically significant clustering:** The curve sits **above the global CSR envelope** from **r ≈ 0 to \~480 m**
+
+-   **Sembawang:** **≈50%** of the tested distance range (≈0–480 m out of ≈0–950 m) shows **significant clustering** of kiosks.
+
 ```{r}
 #| echo: false 
 library(ggplot2)
@@ -805,6 +813,18 @@ p   # render the plotly object
 
 ```
 
+**Insights:**
+
+The curve **L(r) − r \> 0** across the domain → kiosks are **clustered rather than evenly spaced**.
+
+**Significant clustering windows (global envelope):**
+
+-   **Short range:** \~**0–250 m** — strong neighbourhood-scale clustering around town-centre/MRT/mall nodes.
+
+-   **Mid range:** \~**560–740 m** — excess pairs at sub-kilometre separation, consistent with **multiple nearby nodes** within one study window.
+
+-   **Ang Mo Kio & Bishan:** **≈35%** of the tested distance range (about **0–250 m** and **560–740 m** out of \~0–1.2 km) shows **significant clustering** of kiosks.
+
 ```{r}
 #| echo: false 
 library(ggplot2)
@@ -880,6 +900,15 @@ if (nrow(subset(L_pg_sk_df, obs > hi)) == 0) {
 p  # render the interactive plot
 
 ```
+
+**Insights:**
+
+-   The curve **L(r) − r \> 0 across the whole domain** → kiosks are **aggregated** (not evenly spaced).
+
+-   The observed curve lies **above the CSR envelope from \~10 m to \~110 m** (nearly the entire tested range).\
+    ⇒ **strong, statistically significant clustering at very short distances**—kiosks tend to co-locate within the same mall/station complex or adjacent shop lines.
+
+-   **Punggol & Sengkang:** **≈90%** of the tested distance range (**\~10–110 m of \~0–120 m**) shows **significant clustering**.
 
 ```{r}
 #| echo: false 
@@ -957,6 +986,17 @@ p  # render the interactive plot
 
 ```
 
+**Insights:**
+
+-   The curve **L(r) − r is positive for almost the entire distance range**, so kiosks are **aggregated** rather than evenly spaced.
+
+<!-- -->
+
+-    The observed curve lies **above the CSR envelope from roughly \~80 m to \~1.85 km**, with only a very short segment near the origin inside the envelope.\
+    ⇒ **Strong, statistically significant clustering** from neighbourhood to corridor scale.
+
+-   **Jurong West & Jurong East:** **\~95%** of the tested distance range shows **significant clustering** of kiosks.
+
 ```{r}
 #| echo: false 
 library(ggplot2)
@@ -1032,5 +1072,12 @@ if (nrow(subset(L_dc_df, obs > hi)) == 0) {
 p  # render the interactive plot
 
 ```
+
+**Insights:**
+
+-   The curve **L(r) − r stays positive** from \~0 to \~750 m ⇒ kiosks tend to be **aggregated rather than evenly spaced**.
+
+-   However, the observed curve **remains inside the CSR envelope across the whole range** (does **not** exceed the upper envelope).\
+    ⇒ **No statistically significant departure from CSR** at the tested alpha (i.e., **clustering is not significant** under the global envelope test).
 
 ## **4. Objective: Map Spatio-Temporal Distribution**
