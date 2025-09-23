@@ -32,7 +32,7 @@ From **Jan 2024 to Jun 2025**, Singapore saw rapid growth of **food kiosks (SSIC
 ```{r}
 
 pacman::p_load(readr, dplyr, tidyr, stringr, lubridate,terra,spatstat,
-               sf, tmap, units, httr, jsonlite, tidyverse,rvest )
+               sf, tmap, units, httr, jsonlite, tidyverse,rvest, ggthemes, ployly, ggplot2)
 
 ```
 
@@ -304,22 +304,7 @@ class(sg_owin)
 biz56123_sg_ppp = biz_56123_ppp [sg_owin]
 ```
 
-#### **3.1aClark-Evan Test without CSR for Nearest Neighbour Analysis**
-
-```{r}
-clarkevans.test(biz56123_sg_ppp,
-                correction="none",
-                clipregion="sg_owin",
-                alternative=c("clustered"))
-```
-
-#### **Statistical conclusion**
-
--   The test statistic **R = 0.514** (well **below 1**) and the **p-value \< 2.2e-16**.
-
-    The food kioks locations are **much closer together than we’d expect by random chance**—i.e., they are **strongly clustered**, not evenly spread out.
-
-#### **3.1bClark-Evan Test with CSR for Nearest Neighbour Analysis**
+#### **3.1 Clark-Evan Test with CSR for Nearest Neighbour Analysis**
 
 ```{r}
 clarkevans.test(biz56123_sg_ppp,
@@ -338,6 +323,8 @@ clarkevans.test(biz56123_sg_ppp,
     Food kiosks are **much closer together** than random—i.e., **strongly clustered**, not evenly spread across Singapore.
 
 #### **3.2 Kernel Density Method**
+
+**Exploratory Spatial Data Analysis (ESDA)**
 
 ```{r}
 biz56123sg_ppp_km <- rescale.ppp(biz56123_sg_ppp, 1000, "km")
@@ -361,32 +348,1053 @@ summary(kde_biz56123_km)
 #### Statistical Takeaways
 
 -   The **integral ≈ 482.3** matches the number of kiosks → diagnostic check passed (KDE surface conserves counts).
-
-<!-- -->
-
--    The **mean intensity ≈ 7.2×10⁻⁷ per m²** ≈ **0.72 kiosks per km²** on average over the study window—so most of Singapore is low-intensity with a few concentrated pockets.
-
-<!-- -->
-
+-   The **mean intensity ≈ 7.2×10⁻⁷ per m²** ≈ **0.72 kiosks per km²** on average over the study window—so most of Singapore is low-intensity with a few concentrated pockets.
 -   **Mean intensity:** **0.720 kiosks/km²** → the island-wide baseline is low; activity is concentrated in a few places.
-
-<!-- -->
-
--    **Peak intensity:** **\~91.5 kiosks/km²** → very small areas achieve extremely high density, confirming **tight hotspots**.
-
+-   **Peak intensity:** **\~91.5 kiosks/km²** → very small areas achieve extremely high density, confirming **tight hotspots**.
 -   Hotspots align with **MRT interchanges, mall corridors, CBD/town centres**; peripheral/industrial/green areas are cold.
 
 **Business Communications**
 
 -   **Retail gravity rules**: kiosks concentrate where **footfall and delivery access** are highest (CBD/malls/interchanges).
 
-<!-- -->
+-   **Saturation risk**: the same nodes show **over-concentration**—new kiosks here will face **tight competition and cannibalisation**.
 
--    **Saturation risk**: the same nodes show **over-concentration**—new kiosks here will face **tight competition and cannibalisation**.
+-   **Opportunity**: identify **underserved subzones** (low KDE but reasonable demand/transport) as candidate areas for **decentralised growth**.
 
-<!-- -->
+    #### **Working with different automatic badwidth methods**
 
--    **Opportunity**: identify **underserved subzones** (low KDE but reasonable demand/transport) as candidate areas for **decentralised growth**.
+    ```{r}
+    bw.CvL(biz56123sg_ppp_km )
+    ```
+
+    ```{r}
+    bw.scott(biz56123sg_ppp_km)
+    ```
+
+    ```{r}
+    bw.ppl(biz56123sg_ppp_km)
+    ```
+
+    ```{r}
+    bw.diggle(biz56123sg_ppp_km)
+    ```
+
+    ```{r}
+    kde_biz56123sg.ppl <- density(biz56123sg_ppp_km, 
+                                   sigma=bw.ppl, 
+                                   edge=TRUE,
+                                   kernel="gaussian")
+    par(mfrow=c(1,2))
+    plot(kde_biz56123_km, main = "bw.diggle")
+    plot(kde_biz56123sg.ppl, main = "bw.ppl")
+    ```
+
+    #### **Fixed and Adaptive KDE**
+
+    ```{r}
+    kde_biz56123sg_fb <- density(biz56123sg_ppp_km,
+                                  sigma=0.6, 
+                                  edge=TRUE,
+                                  kernel="gaussian")
+    kde_biz56123sg_ab <- adaptive.density(
+      biz56123sg_ppp_km, 
+      method="kernel")
+    plot(kde_biz56123sg_ab)
+
+    par(mfrow=c(1,2))
+    plot(kde_biz56123sg_fb, main = "Fixed bandwidth")
+    plot(kde_biz56123sg_ab, main = "Adaptive bandwidth")
+    ```
+
+    #### **Plotting cartographic quality KDE map**
+
+    ```{r}
+    kde_biz56123sg_bw_terra <- rast(kde_biz56123_km)
+    class(kde_biz56123sg_bw_terra)
+    kde_biz56123sg_bw_terra
+    ```
+
+    ```{r}
+    crs(kde_biz56123sg_bw_terra) <- "EPSG:3414"
+    kde_biz56123sg_bw_terra
+    ```
+
+    ```{r}
+    tm_shape(kde_biz56123sg_bw_terra) + 
+      tm_raster(col.scale = 
+                  tm_scale_continuous(
+                    values = "viridis"),
+                col.legend = tm_legend(
+                title = "Density values",
+                title.size = 0.7,
+                text.size = 0.7,
+                bg.color = "white",
+                bg.alpha = 0.7,
+                position = tm_pos_in(
+                  "right", "bottom"),
+                frame = TRUE)) +
+      tm_graticules(labels.size = 0.7) +
+      tm_compass() +
+      tm_layout(scale = 1.0)
+    ```
+
+    #### **3.3 First Order SPPA at the Planning Subzone Level**
+
+    ```{r}
+    sbw <- mpsz_cl %>%
+      filter(PLN_AREA_N %in% c( "SEMBAWANG"))
+
+    amk_bs <- mpsz_cl %>%
+      filter(PLN_AREA_N %in% c("ANG MO KIO", "BISHAN"))
+
+    pg_sk<- mpsz_cl %>%
+      filter(PLN_AREA_N %in% c("PUNGGOL","SENGKANG"))
+
+    dc<- mpsz_cl %>%
+      filter(PLN_AREA_N %in% c("DOWNTOWN CORE"))
+
+    jw_je <- mpsz_cl %>%
+      filter(PLN_AREA_N %in% c("JURONG WEST", "JURONG EAST"))
 
 
-## **4 Objective: Examine Infrastructure Proximity**
+
+
+
+
+    ```
+
+```{r}
+sbw_owin = as.owin(sbw)
+amk_bs_owin = as.owin(amk_bs)
+pg_sk_owin = as.owin(pg_sk)
+jw_je_owin = as.owin(jw_je)
+dc_owin = as.owin(dc)
+```
+
+```{r}
+biz56123_sbw_ppp = biz_56123_ppp [sbw_owin]
+biz56123_amk_bs_ppp = biz_56123_ppp [amk_bs_owin]
+biz56123_pg_sk_ppp = biz_56123_ppp [pg_sk_owin]
+biz56123_jw_je_ppp = biz_56123_ppp [jw_je_owin]
+biz56123_dc_ppp = biz_56123_ppp [dc_owin]
+```
+
+```{r}
+biz56123_sbw_ppp.km = rescale.ppp(biz56123_sbw_ppp, 1000, "km")
+biz56123_amk_bs_ppp.km = rescale.ppp(biz56123_amk_bs_ppp, 1000, "km")
+biz56123_pg_sk_ppp.km = rescale.ppp(biz56123_pg_sk_ppp, 1000, "km")
+biz56123_jw_je_ppp.km = rescale.ppp(biz56123_jw_je_ppp, 1000, "km")
+biz56123_dc_ppp.km = rescale.ppp(biz56123_dc_ppp, 1000, "km")
+```
+
+```{r}
+par(mfrow=c(2,3))
+plot(unmark(biz56123_sbw_ppp.km ), 
+  main="Sembawang")
+plot(unmark(biz56123_amk_bs_ppp.km), 
+  main="Ang Mo Kio & Bishan")
+plot(unmark(biz56123_pg_sk_ppp.km), 
+  main="Punggol & Sengkang")
+plot(unmark(biz56123_jw_je_ppp.km), 
+  main="Jurong West & Jurong East")
+plot(unmark(biz56123_dc_ppp.km), 
+  main="Downtown Core")
+```
+
+#### **Clark and Evans Test**
+
+```{r}
+clarkevans.test(biz56123_sbw_ppp,
+                correction="none",
+                clipregion=NULL,
+                alternative=c("two.sided"),
+                nsim=999)
+```
+
+#### **Computing KDE surfaces by planning area**
+
+```{r}
+
+
+ppps <- list(
+  "Sembawang"                 = biz56123_sbw_ppp.km,
+  "Ang Mo Kio & Bishan"       = biz56123_amk_bs_ppp.km,
+  "Punggol & Sengkang"        = biz56123_pg_sk_ppp.km,
+  "Jurong West & Jurong East" = biz56123_jw_je_ppp.km,
+  "Downtown Core"             = biz56123_dc_ppp.km
+     )
+
+sigma_km <- 0.30
+ims  <- lapply(ppps, function(pp) density(pp, sigma = sigma_km, edge = TRUE, kernel = "gaussian"))
+zmax <- max(sapply(ims, function(im) max(im$v, na.rm = TRUE)))
+
+par(mfrow = c(2,3), mar = c(1.2, 1.2, 3.2, 5.2))
+
+# ensure zmax exists (common color scale)
+if (!exists("zmax")) {
+  zmax <- max(sapply(ims, function(im) max(im$v, na.rm = TRUE)))
+}
+
+for (i in seq_along(ims)) {
+  plot(ims[[i]],
+       main    = "",                 # we'll add title() after
+       xlab    = "", ylab = "",
+       axes    = FALSE, frame.plot = FALSE,
+       ribbon  = TRUE,
+       zlim    = c(0, zmax),
+       ribargs = list(main = expression("Kiosks per km"^2)))  # legend label
+
+  # 2-line panel title: top = unit, bottom = area name
+  ttl <- bquote(atop(" ", .(names(ppps)[i])))
+  title(ttl, cex.main = 1.05, line = 1.2)
+}
+```
+
+```{r}
+#| eval: false
+#| include: false
+#| echo: false
+
+#original
+
+ppps <- list(
+  "Sembawang"                 = biz56123_sbw_ppp.km,
+  "Ang Mo Kio & Bishan"       = biz56123_amk_bs_ppp.km,
+  "Punggol & Sengkang"        = biz56123_pg_sk_ppp.km,
+  "Jurong West & Jurong East" = biz56123_jw_je_ppp.km,
+  "Downtown Core"             = biz56123_dc_ppp.km
+     )
+
+sigma_km <- 0.30
+ims  <- lapply(ppps, function(pp) density(pp, sigma = sigma_km, edge = TRUE, kernel = "gaussian"))
+zmax <- max(sapply(ims, function(im) max(im$v, na.rm = TRUE)))
+
+#sigma_km <- 0.30
+#ims <- lapply(ppps, function(pp) spatstat.core::density(pp, sigma = sigma_km, edge = TRUE, kernel = "gaussian"))
+#zmax <- max(sapply(ims, function(im) max(im$v, na.rm = TRUE)))
+
+
+par(mfrow = c(2,3), mar = c(1.2, 1.2, 2.8, 5.2))
+par(mar = c(4,4,3.8,6))
+plot(ims[[i]], main = "")
+title(ttl, line = 1.2, cex.main = 1.05)
+
+for (i in seq_along(ims)) {
+  
+  plot(ims[[i]],
+       main    = "",
+       xlab    = "", ylab = "",
+       axes    = FALSE, frame.plot = FALSE,
+       ribbon  = TRUE,
+       zlim    = c(0, zmax),
+       ribargs = list(main = " ")) 
+
+ttl <- bquote(atop("Kiosks per km"^2, .(names(ppps)[i])))
+3title(ttl, cex.main = 1.05, line = 1.2)
+
+   }
+
+
+```
+
+#### **3.4 Second-order Spatial Point Patterns Analysis**
+
+***G Function Estimation (for Sembawang)***
+
+```{r}
+set.seed(1234)
+```
+
+```{r}
+#for variable reference
+#biz56123_ys_ppp = biz_56123_ppp [ys_owin]
+#biz56123_amk_bs_ppp = biz_56123_ppp [amk_bs_owin]
+#biz56123_jw_je_ppp = biz_56123_ppp [jw_je_owin]
+#biz56123_dc_ppp = biz_56123_ppp [dc_owin]
+
+G_SBW = Gest(biz56123_sbw_ppp, correction = "border")
+plot(G_SBW, xlim=c(0,500))
+
+
+```
+
+To confirm the observed spatial patterns above, a hypothesis test will be conducted. The hypothesis and test are as follows:
+
+Ho = The distribution of food kiosks at Yishun are randomly distributed.
+
+H1= The distribution of food kiosks at Yishun are not randomly distributed.
+
+The null hypothesis will be rejected if p-value is smaller than alpha value of 0.001.
+
+Monte Carlo test with G-function
+
+```{r}
+G_SBW.csr <- envelope(biz56123_sbw_ppp, Gest, nsim = 999)
+```
+
+```{r}
+plot(G_SBW.csr)
+```
+
+***Pairwise L Function***
+
+```{r}
+
+
+L_sbw= Lest(biz56123_sbw_ppp, correction = "Ripley")
+L_amk_bs= Lest(biz56123_amk_bs_ppp, correction = "Ripley")
+L_pg_sk= Lest(biz56123_pg_sk_ppp, correction = "Ripley")
+L_jw_je= Lest(biz56123_jw_je_ppp, correction = "Ripley")
+L_dc= Lest(biz56123_dc_ppp, correction = "Ripley")
+
+set.seed(1234)
+L_sbw.csr <- envelope(biz56123_sbw_ppp, Lest, 
+                     nsim = 99, 
+                     rank = 1, 
+                      global=TRUE)
+
+
+set.seed(1234)
+L_amk_bs.csr <- envelope(biz56123_amk_bs_ppp, Lest, 
+                     nsim = 99, 
+                     rank = 1, 
+                     global=TRUE)
+
+
+set.seed(1234)
+L_pg_sk.csr <- envelope(biz56123_pg_sk_ppp, Lest, 
+                     nsim = 99, 
+                     rank = 1, 
+                     global=TRUE)
+
+
+set.seed(1234)
+L_jw_je.csr <- envelope(biz56123_jw_je_ppp, Lest, 
+                     nsim = 99, 
+                     rank = 1, 
+                     global=TRUE)
+
+
+set.seed(1234)
+L_dc.csr <- envelope(biz56123_dc_ppp, Lest, 
+                     nsim = 99, 
+                     rank = 1, 
+                     global=TRUE)
+```
+
+```{r}
+
+library(ggplot2)
+library(ggthemes)
+library(plotly)
+
+# ----- build the plot data/frame -----
+title <- "Pairwise Distance: L function for Sembawang"
+
+L_sbw_csr_df <- as.data.frame(L_sbw.csr)
+
+colour <- c("#0D657D","#ee770d","#D3D3D3")
+
+csr_plot <- ggplot(L_sbw_csr_df, aes(r, obs - r)) +
+  geom_line(colour = "#4d4d4d") +
+  geom_line(aes(y = theo - r), colour = "red", linetype = "dashed") +
+  geom_ribbon(aes(ymin = lo - r, ymax = hi - r),
+              alpha = 0.10, colour = "#91bfdb") +
+  xlab("Distance r (m)") +
+  ylab("L(r) - r") +
+  geom_rug(data = L_sbw_csr_df[L_sbw_csr_df$obs >  L_sbw_csr_df$hi,], sides = "b", colour = colour[1]) +
+  geom_rug(data = L_sbw_csr_df[L_sbw_csr_df$obs <  L_sbw_csr_df$lo,], sides = "b", colour = colour[2]) +
+  geom_rug(data = L_sbw_csr_df[L_sbw_csr_df$obs >= L_sbw_csr_df$lo &
+                               L_sbw_csr_df$obs <= L_sbw_csr_df$hi,], sides = "b", colour = colour[3]) +
+  theme_tufte() +
+  ggtitle(title)
+
+text1 <- "Significant clustering"
+text2 <- "Significant segregation"
+text3 <- "Not significant clustering/segregation"
+
+# ----- conditional labelling of the rug traces -----
+if (nrow(L_sbw_csr_df[L_sbw_csr_df$obs > L_sbw_csr_df$hi,]) == 0) {
+  if (nrow(L_sbw_csr_df[L_sbw_csr_df$obs < L_sbw_csr_df$lo,]) == 0) {
+
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) |>
+      style(text = text3, traces = 4) |>
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+  } else if (nrow(L_sbw_csr_df[L_sbw_csr_df$obs >= L_sbw_csr_df$lo &
+                               L_sbw_csr_df$obs <= L_sbw_csr_df$hi,]) == 0) {
+
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) |>
+      style(text = text2, traces = 4) |>
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+  } else {
+
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) |>
+      style(text = text2, traces = 4) |>
+      style(text = text3, traces = 5) |>
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+  }
+
+} else if (nrow(L_sbw_csr_df[L_sbw_csr_df$obs < L_sbw_csr_df$lo,]) == 0) {
+
+  if (nrow(L_sbw_csr_df[L_sbw_csr_df$obs >= L_sbw_csr_df$lo &
+                        L_sbw_csr_df$obs <= L_sbw_csr_df$hi,]) == 0) {
+
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) |>
+      style(text = text1, traces = 4) |>
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+  } else {
+
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) |>
+      style(text = text1, traces = 4) |>
+      style(text = text3, traces = 5) |>
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+  }
+
+} else {
+
+  p <- ggplotly(csr_plot, dynamicTicks = TRUE) |>
+    style(text = text1, traces = 4) |>
+    style(text = text2, traces = 5) |>
+    style(text = text3, traces = 6) |>
+    layout(xaxis = list(rangeslider = list(visible = TRUE)))
+}
+
+p  # print the plotly object
+
+```
+
+```{r}
+#| eval: false
+#| include: false
+#| echo: false
+
+library(plotly)   # make sure it’s loaded
+
+p <- ggplotly(csr_plot, dynamicTicks = TRUE)
+title <- "Pairwise Distance: L function for Sembawang"
+
+L_sbw_csr_df <- as.data.frame(L_sbw.csr)
+
+colour=c("#0D657D","#ee770d","#D3D3D3")
+csr_plot <- ggplot(L_sbw_csr_df, aes(r, obs-r))+
+  # plot observed value
+  geom_line(colour=c("#4d4d4d"))+
+  geom_line(aes(r,theo-r), colour="red", linetype = "dashed")+
+  # plot simulation envelopes
+  geom_ribbon(aes(ymin=lo-r,ymax=hi-r),alpha=0.1, colour=c("#91bfdb")) +
+  xlab("Distance r (m)") +
+  ylab("L(r)-r") +
+  geom_rug(data=L_sbw_csr_df[L_sbw_csr_df$obs > L_sbw_csr_df$hi,], sides="b", colour=colour[1])  +
+  geom_rug(data=L_sbw_csr_df[L_sbw_csr_df$obs < L_sbw_csr_df$lo,], sides="b", colour=colour[2]) +
+  geom_rug(data=L_sbw_csr_df[L_sbw_csr_df$obs >= L_sbw_csr_df$lo & L_sbw_csr_df$obs <= L_sbw_csr_df$hi,], sides="b", color=colour[3]) +
+  theme_tufte()+
+  ggtitle(title)
+
+text1<-"Significant clustering"
+text2<-"Significant segregation"
+text3<-"Not significant clustering/segregation"
+
+# the below conditional statement is required to ensure that the labels (text1/2/3) are assigned to the correct traces
+if (nrow(L_sbw_csr_df[L_sbw_csr_df$obs > L_sbw_csr_df$hi,])==0){ 
+  if (nrow(L_sbw_csr_df[L_sbw_csr_df$obs < L_sbw_csr_df$lo,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text3, traces = 4) %>% 
+      rangeslider()
+    
+  }else if (nrow(L_sbw_csr_df[L_sbw_csr_df$obs >= L_sbw_csr_df$lo & L_sbw_csr_df$obs <= L_sbw_csr_df$hi,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>% 
+      rangeslider()
+  }else {
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      style(text = text3, traces = 5)%>% 
+      rangeslider()
+  }
+} else if (nrow(L_sbw_csr_df[L_sbw_csr_df$obs < L_sbw_csr_df$lo,])==0){
+  if (nrow(L_sbw_csr_df[L_sbw_csr_df$obs >= L_sbw_csr_df$lo & L_sbw_csr_df$obs <= L_sbw_csr_df$hi,])==0){
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>% 
+      rangeslider()
+  } else{
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      style(text = text3, traces = 5) %>% 
+      rangeslider()
+  }
+} else{
+  ggplotly(csr_plot, dynamicTicks=T) %>%
+    style(text = text1, traces = 4) %>%
+    style(text = text2, traces = 5) %>%
+    style(text = text3, traces = 6)%>% 
+    rangeslider()
+  }
+
+
+```
+
+```{r}
+library(ggplot2)
+library(ggthemes)
+library(plotly)
+
+title <- "Pairwise Distance: L function for Ang Mo Kio and Bishan"
+
+L_amk_bs_df <- as.data.frame(L_amk_bs.csr)
+
+colour <- c("#0D657D","#ee770d","#D3D3D3")
+
+csr_plot <- ggplot(L_amk_bs_df, aes(x = r, y = obs - r)) +
+  geom_line(colour = "#4d4d4d") +
+  geom_line(aes(y = theo - r), colour = "red", linetype = "dashed") +
+  geom_ribbon(aes(ymin = lo - r, ymax = hi - r),
+              alpha = 0.10, fill = "#91bfdb") +
+  xlab("Distance r (m)") +
+  ylab("L(r) - r") +
+  geom_rug(data = L_amk_bs_df[L_amk_bs_df$obs >  L_amk_bs_df$hi,], sides = "b", colour = colour[1]) +
+  geom_rug(data = L_amk_bs_df[L_amk_bs_df$obs <  L_amk_bs_df$lo,], sides = "b", colour = colour[2]) +
+  geom_rug(data = L_amk_bs_df[L_amk_bs_df$obs >= L_amk_bs_df$lo & L_amk_bs_df$obs <= L_amk_bs_df$hi,],
+           sides = "b", colour = colour[3]) +
+  theme_tufte() +
+  ggtitle(title)
+
+text1 <- "Significant clustering"
+text2 <- "Significant segregation"
+text3 <- "Not significant clustering/segregation"
+
+# ---- replace rangeslider() with layout(...rangeslider=...) ----
+if (nrow(L_amk_bs_df[L_amk_bs_df$obs > L_amk_bs_df$hi,]) == 0) {
+
+  if (nrow(L_amk_bs_df[L_amk_bs_df$obs < L_amk_bs_df$lo,]) == 0) {
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+      style(text = text3, traces = 4) %>%
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+  } else if (nrow(L_amk_bs_df[L_amk_bs_df$obs >= L_amk_bs_df$lo &
+                              L_amk_bs_df$obs <= L_amk_bs_df$hi,]) == 0) {
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+      style(text = text2, traces = 4) %>%
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+  } else {
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+      style(text = text2, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+  }
+
+} else if (nrow(L_amk_bs_df[L_amk_bs_df$obs < L_amk_bs_df$lo,]) == 0) {
+
+  if (nrow(L_amk_bs_df[L_amk_bs_df$obs >= L_amk_bs_df$lo &
+                       L_amk_bs_df$obs <= L_amk_bs_df$hi,]) == 0) {
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+      style(text = text1, traces = 4) %>%
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+  } else {
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+      style(text = text1, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+  }
+
+} else {
+
+  p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+    style(text = text1, traces = 4) %>%
+    style(text = text2, traces = 5) %>%
+    style(text = text3, traces = 6) %>%
+    layout(xaxis = list(rangeslider = list(visible = TRUE)))
+}
+
+p   # render the plotly object
+
+```
+
+```{r}
+#| eval: false
+#| include: false
+#| echo: false
+
+title <- "Pairwise Distance: L function for Ang Mo Kio and Bishan"
+
+L_amk_bs_df <- as.data.frame(L_amk_bs.csr)
+
+colour=c("#0D657D","#ee770d","#D3D3D3")
+csr_plot <- ggplot(L_amk_bs_df, aes(r, obs-r))+
+  # plot observed value
+  geom_line(colour=c("#4d4d4d"))+
+  geom_line(aes(r,theo-r), colour="red", linetype = "dashed")+
+  # plot simulation envelopes
+  geom_ribbon(aes(ymin=lo-r,ymax=hi-r),alpha=0.1, colour=c("#91bfdb")) +
+  xlab("Distance r (m)") +
+  ylab("L(r)-r") +
+  geom_rug(data=L_amk_bs_df[L_amk_bs_df$obs > L_amk_bs_df$hi,], sides="b", colour=colour[1])  +
+  geom_rug(data=L_amk_bs_df[L_amk_bs_df$obs < L_amk_bs_df$lo,], sides="b", colour=colour[2]) +
+  geom_rug(data=L_amk_bs_df[L_amk_bs_df$obs >= L_amk_bs_df$lo & L_amk_bs_df$obs <= L_amk_bs_df$hi,], sides="b", color=colour[3]) +
+  theme_tufte()+
+  ggtitle(title)
+
+text1<-"Significant clustering"
+text2<-"Significant segregation"
+text3<-"Not significant clustering/segregation"
+
+# the below conditional statement is required to ensure that the labels (text1/2/3) are assigned to the correct traces
+if (nrow(L_amk_bs_df[L_amk_bs_df$obs > L_amk_bs_df$hi,])==0){ 
+  if (nrow(L_amk_bs_df[L_amk_bs_df$obs < L_amk_bs_df$lo,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text3, traces = 4) %>%
+      rangeslider() 
+  }else if (nrow(L_amk_bs_df[L_amk_bs_df$obs >= L_amk_bs_df$lo & L_amk_bs_df$obs <= L_amk_bs_df$hi,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      rangeslider() 
+  }else {
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider() 
+  }
+} else if (nrow(L_amk_bs_df[L_amk_bs_df$obs < L_amk_bs_df$lo,])==0){
+  if (nrow(L_amk_bs_df[L_amk_bs_df$obs >= L_amk_bs_df$lo & L_amk_bs_df$obs <= L_amk_bs_df$hi,])==0){
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      rangeslider() 
+  } else{
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider()
+  }
+} else{
+  ggplotly(csr_plot, dynamicTicks=T) %>%
+    style(text = text1, traces = 4) %>%
+    style(text = text2, traces = 5) %>%
+    style(text = text3, traces = 6) %>%
+    rangeslider()
+  }
+
+
+
+
+```
+
+```{r}
+library(ggplot2)
+library(ggthemes)
+library(plotly)
+
+title <- "Pairwise Distance: L function for Punggol and Sengkang"
+
+L_pg_sk_df <- as.data.frame(L_pg_sk.csr)
+
+colour <- c("#0D657D","#ee770d","#D3D3D3")
+
+csr_plot <- ggplot(L_pg_sk_df, aes(x = r, y = obs - r)) +
+  geom_line(colour = "#4d4d4d") +
+  geom_line(aes(y = theo - r), colour = "red", linetype = "dashed") +
+  geom_ribbon(aes(ymin = lo - r, ymax = hi - r),
+              alpha = 0.10, fill = "#91bfdb") +
+  xlab("Distance r (m)") +
+  ylab("L(r) - r") +
+  geom_rug(data = subset(L_pg_sk_df, obs >  hi), sides = "b", colour = colour[1]) +
+  geom_rug(data = subset(L_pg_sk_df, obs <  lo), sides = "b", colour = colour[2]) +
+  geom_rug(data = subset(L_pg_sk_df, obs >= lo & obs <= hi), sides = "b", colour = colour[3]) +
+  theme_tufte() +
+  ggtitle(title)
+
+text1 <- "Significant clustering"
+text2 <- "Significant segregation"
+text3 <- "Not significant clustering/segregation"
+
+# ---- replace rangeslider() with layout(...rangeslider=...) ----
+if (nrow(subset(L_pg_sk_df, obs > hi)) == 0) {
+
+  if (nrow(subset(L_pg_sk_df, obs < lo)) == 0) {
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+      style(text = text3, traces = 4) %>%
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+  } else if (nrow(subset(L_pg_sk_df, obs >= lo & obs <= hi)) == 0) {
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+      style(text = text2, traces = 4) %>%
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+  } else {
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+      style(text = text2, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+  }
+
+} else if (nrow(subset(L_pg_sk_df, obs < lo)) == 0) {
+
+  if (nrow(subset(L_pg_sk_df, obs >= lo & obs <= hi)) == 0) {
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+      style(text = text1, traces = 4) %>%
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+  } else {
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+      style(text = text1, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+  }
+
+} else {
+
+  p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+    style(text = text1, traces = 4) %>%
+    style(text = text2, traces = 5) %>%
+    style(text = text3, traces = 6) %>%
+    layout(xaxis = list(rangeslider = list(visible = TRUE)))
+}
+
+p  # render the interactive plot
+
+```
+
+```{r}
+#| eval: false
+#| include: false
+#| echo: false
+
+title <- "Pairwise Distance: L function for Punggol and Sengkang"
+
+L_pg_sk_df <- as.data.frame(L_pg_sk.csr)
+
+colour=c("#0D657D","#ee770d","#D3D3D3")
+csr_plot <- ggplot(L_pg_sk_df, aes(r, obs-r))+
+  # plot observed value
+  geom_line(colour=c("#4d4d4d"))+
+  geom_line(aes(r,theo-r), colour="red", linetype = "dashed")+
+  # plot simulation envelopes
+  geom_ribbon(aes(ymin=lo-r,ymax=hi-r),alpha=0.1, colour=c("#91bfdb")) +
+  xlab("Distance r (m)") +
+  ylab("L(r)-r") +
+  geom_rug(data=L_pg_sk_df[L_pg_sk_df$obs > L_pg_sk_df$hi,], sides="b", colour=colour[1])  +
+  geom_rug(data=L_pg_sk_df[L_pg_sk_df$obs < L_pg_sk_df$lo,], sides="b", colour=colour[2]) +
+  geom_rug(data=L_pg_sk_df[L_pg_sk_df$obs >= L_pg_sk_df$lo & L_pg_sk_df$obs <= L_pg_sk_df$hi,], sides="b", color=colour[3]) +
+  theme_tufte()+
+  ggtitle(title)
+
+text1<-"Significant clustering"
+text2<-"Significant segregation"
+text3<-"Not significant clustering/segregation"
+
+# the below conditional statement is required to ensure that the labels (text1/2/3) are assigned to the correct traces
+if (nrow(L_pg_sk_df[L_pg_sk_df$obs > L_pg_sk_df$hi,])==0){ 
+  if (nrow(L_pg_sk_df[L_pg_sk_df$obs < L_pg_sk_df$lo,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text3, traces = 4) %>%
+      rangeslider() 
+  }else if (nrow(L_pg_sk_df[L_pg_sk_df$obs >= L_pg_sk_df$lo & L_pg_sk_df$obs <= L_pg_sk_df$hi,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      rangeslider() 
+  }else {
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider() 
+  }
+} else if (nrow(L_pg_sk_df[L_pg_sk_df$obs < L_pg_sk_df$lo,])==0){
+  if (nrow(L_pg_sk_df[L_pg_sk_df$obs >= L_pg_sk_df$lo & L_pg_sk_df$obs <= L_pg_sk_df$hi,])==0){
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      rangeslider() 
+  } else{
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider()
+  }
+} else{
+  ggplotly(csr_plot, dynamicTicks=T) %>%
+    style(text = text1, traces = 4) %>%
+    style(text = text2, traces = 5) %>%
+    style(text = text3, traces = 6) %>%
+    rangeslider()
+  }
+```
+
+```{r}
+library(ggplot2)
+library(ggthemes)
+library(plotly)
+
+title <- "Pairwise Distance: L function for Jurong West and Jurong East"
+
+L_jw_je_df <- as.data.frame(L_jw_je.csr)
+
+colour <- c("#0D657D","#ee770d","#D3D3D3")
+
+csr_plot <- ggplot(L_jw_je_df, aes(x = r, y = obs - r)) +
+  geom_line(colour = "#4d4d4d") +
+  geom_line(aes(y = theo - r), colour = "red", linetype = "dashed") +
+  geom_ribbon(aes(ymin = lo - r, ymax = hi - r),
+              alpha = 0.10, fill = "#91bfdb") +
+  xlab("Distance r (m)") +
+  ylab("L(r) - r") +
+  geom_rug(data = subset(L_jw_je_df, obs >  hi), sides = "b", colour = colour[1]) +
+  geom_rug(data = subset(L_jw_je_df, obs <  lo), sides = "b", colour = colour[2]) +
+  geom_rug(data = subset(L_jw_je_df, obs >= lo & obs <= hi), sides = "b", colour = colour[3]) +
+  theme_tufte() +
+  ggtitle(title)
+
+text1 <- "Significant clustering"
+text2 <- "Significant segregation"
+text3 <- "Not significant clustering/segregation"
+
+# ---- replace rangeslider() with layout(...rangeslider=...) ----
+if (nrow(subset(L_jw_je_df, obs > hi)) == 0) {
+
+  if (nrow(subset(L_jw_je_df, obs < lo)) == 0) {
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+      style(text = text3, traces = 4) %>%
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+  } else if (nrow(subset(L_jw_je_df, obs >= lo & obs <= hi)) == 0) {
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+      style(text = text2, traces = 4) %>%
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+  } else {
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+      style(text = text2, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+  }
+
+} else if (nrow(subset(L_jw_je_df, obs < lo)) == 0) {
+
+  if (nrow(subset(L_jw_je_df, obs >= lo & obs <= hi)) == 0) {
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+      style(text = text1, traces = 4) %>%
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+  } else {
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+      style(text = text1, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+  }
+
+} else {
+
+  p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+    style(text = text1, traces = 4) %>%
+    style(text = text2, traces = 5) %>%
+    style(text = text3, traces = 6) %>%
+    layout(xaxis = list(rangeslider = list(visible = TRUE)))
+}
+
+p  # render the interactive plot
+
+```
+
+```{r}
+#| eval: false
+#| include: false
+#| echo: false
+title <- "Pairwise Distance: L function for Jurong West and Jurong East"
+
+L_jw_je_df <- as.data.frame(L_jw_je.csr)
+
+colour=c("#0D657D","#ee770d","#D3D3D3")
+csr_plot <- ggplot(L_jw_je_df, aes(r, obs-r))+
+  # plot observed value
+  geom_line(colour=c("#4d4d4d"))+
+  geom_line(aes(r,theo-r), colour="red", linetype = "dashed")+
+  # plot simulation envelopes
+  geom_ribbon(aes(ymin=lo-r,ymax=hi-r),alpha=0.1, colour=c("#91bfdb")) +
+  xlab("Distance r (m)") +
+  ylab("L(r)-r") +
+  geom_rug(data=L_jw_je_df[L_jw_je_df$obs > L_jw_je_df$hi,], sides="b", colour=colour[1])  +
+  geom_rug(data=L_jw_je_df[L_jw_je_df$obs < L_jw_je_df$lo,], sides="b", colour=colour[2]) +
+  geom_rug(data=L_jw_je_df[L_jw_je_df$obs >= L_jw_je_df$lo & L_jw_je_df$obs <= L_jw_je_df$hi,], sides="b", color=colour[3]) +
+  theme_tufte()+
+  ggtitle(title)
+
+text1<-"Significant clustering"
+text2<-"Significant segregation"
+text3<-"Not significant clustering/segregation"
+
+# the below conditional statement is required to ensure that the labels (text1/2/3) are assigned to the correct traces
+if (nrow(L_jw_je_df[L_jw_je_df$obs > L_jw_je_df$hi,])==0){ 
+  if (nrow(L_jw_je_df[L_jw_je_df$obs < L_jw_je_df$lo,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text3, traces = 4) %>%
+      rangeslider() 
+  }else if (nrow(L_jw_je_df[L_jw_je_df$obs >= L_jw_je_df$lo & L_jw_je_df$obs <= L_jw_je_df$hi,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      rangeslider() 
+  }else {
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider() 
+  }
+} else if (nrow(L_jw_je_df[L_jw_je_df$obs < L_jw_je_df$lo,])==0){
+  if (nrow(L_jw_je_df[L_jw_je_df$obs >= L_jw_je_df$lo & L_jw_je_df$obs <= L_jw_je_df$hi,])==0){
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      rangeslider() 
+  } else{
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider()
+  }
+} else{
+  ggplotly(csr_plot, dynamicTicks=T) %>%
+    style(text = text1, traces = 4) %>%
+    style(text = text2, traces = 5) %>%
+    style(text = text3, traces = 6) %>%
+    rangeslider()
+  }
+```
+
+```{r}
+library(ggplot2)
+library(ggthemes)
+library(plotly)
+
+title <- "Pairwise Distance: L function for Downtown Core"
+
+L_dc_df <- as.data.frame(L_dc.csr)
+
+colour <- c("#0D657D","#ee770d","#D3D3D3")
+
+csr_plot <- ggplot(L_dc_df, aes(x = r, y = obs - r)) +
+  geom_line(colour = "#4d4d4d") +
+  geom_line(aes(y = theo - r), colour = "red", linetype = "dashed") +
+  geom_ribbon(aes(ymin = lo - r, ymax = hi - r),
+              alpha = 0.10, fill = "#91bfdb") +
+  xlab("Distance r (m)") +
+  ylab("L(r) - r") +
+  geom_rug(data = subset(L_dc_df, obs >  hi), sides = "b", colour = colour[1]) +
+  geom_rug(data = subset(L_dc_df, obs <  lo), sides = "b", colour = colour[2]) +
+  geom_rug(data = subset(L_dc_df, obs >= lo & obs <= hi), sides = "b", colour = colour[3]) +
+  theme_tufte() +
+  ggtitle(title)
+
+text1 <- "Significant clustering"
+text2 <- "Significant segregation"
+text3 <- "Not significant clustering/segregation"
+
+# ---- replace rangeslider() with layout(...rangeslider=...) ----
+if (nrow(subset(L_dc_df, obs > hi)) == 0) {
+
+  if (nrow(subset(L_dc_df, obs < lo)) == 0) {
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+      style(text = text3, traces = 4) %>%
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+  } else if (nrow(subset(L_dc_df, obs >= lo & obs <= hi)) == 0) {
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+      style(text = text2, traces = 4) %>%
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+  } else {
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+      style(text = text2, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+  }
+
+} else if (nrow(subset(L_dc_df, obs < lo)) == 0) {
+
+  if (nrow(subset(L_dc_df, obs >= lo & obs <= hi)) == 0) {
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+      style(text = text1, traces = 4) %>%
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+
+  } else {
+    p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+      style(text = text1, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      layout(xaxis = list(rangeslider = list(visible = TRUE)))
+  }
+
+} else {
+
+  p <- ggplotly(csr_plot, dynamicTicks = TRUE) %>%
+    style(text = text1, traces = 4) %>%
+    style(text = text2, traces = 5) %>%
+    style(text = text3, traces = 6) %>%
+    layout(xaxis = list(rangeslider = list(visible = TRUE)))
+}
+
+p  # render the interactive plot
+
+```
+
+```{r}
+#| eval: false
+#| include: false
+#| echo: false
+title <- "Pairwise Distance: L function for Downtown Core"
+
+L_dc_df <- as.data.frame(L_dc.csr)
+
+colour=c("#0D657D","#ee770d","#D3D3D3")
+csr_plot <- ggplot(L_dc_df, aes(r, obs-r))+
+  # plot observed value
+  geom_line(colour=c("#4d4d4d"))+
+  geom_line(aes(r,theo-r), colour="red", linetype = "dashed")+
+  # plot simulation envelopes
+  geom_ribbon(aes(ymin=lo-r,ymax=hi-r),alpha=0.1, colour=c("#91bfdb")) +
+  xlab("Distance r (m)") +
+  ylab("L(r)-r") + 
+  geom_rug(data=L_dc_df[L_dc_df$obs > L_dc_df$hi,], sides="b", colour=colour[1])  +
+  geom_rug(data=L_dc_df[L_dc_df$obs < L_dc_df$lo,], sides="b", colour=colour[2]) +
+  geom_rug(data=L_dc_df[L_dc_df$obs >= L_dc_df$lo & L_dc_df$obs <= L_dc_df$hi,], sides="b", color=colour[3]) +
+  theme_tufte()+
+  ggtitle(title)
+
+text1<-"Significant clustering"
+text2<-"Significant segregation"
+text3<-"Not significant clustering/segregation"
+
+# the below conditional statement is required to ensure that the labels (text1/2/3) are assigned to the correct traces
+if (nrow(L_dc_df[L_dc_df$obs > L_dc_df$hi,])==0){ 
+  if (nrow(L_dc_df[L_dc_df$obs < L_dc_df$lo,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text3, traces = 4) %>%
+      rangeslider() 
+  }else if (nrow(L_dc_df[L_dc_df$obs >= L_dc_df$lo & L_dc_df$obs <= L_dc_df$hi,])==0){ 
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      rangeslider() 
+  }else {
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider() 
+  }
+} else if (nrow(L_dc_df[L_dc_df$obs < L_dc_df$lo,])==0){
+  if (nrow(L_dc_df[L_dc_df$obs >= L_dc_df$lo & L_dc_df$obs <= L_dc_df$hi,])==0){
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      rangeslider() 
+  } else{
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider()
+  }
+} else{
+  ggplotly(csr_plot, dynamicTicks=T) %>%
+    style(text = text1, traces = 4) %>%
+    style(text = text2, traces = 5) %>%
+    style(text = text3, traces = 6) %>%
+    rangeslider()
+  }
+```
+
+## **Objective: Examine Infrastructure Proximity**
