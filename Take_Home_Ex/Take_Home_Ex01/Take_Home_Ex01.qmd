@@ -17,22 +17,19 @@ From **Jan 2024 to Jun 2025**, Singapore saw rapid growth of **food kiosks (SSIC
 ## **1. Objectives**
 
 -   **Assess Clustering \***\
-    Use spatial statistics (KDE, Ripley’s K/L or O-ring) to test whether kiosks are clustered or dispersed and at what spatial scales.
+    Use spatial statistics to test whether kiosks are clustered or dispersed and at what spatial scales.
+
 -   **Map Spatio-Temporal Distribution\***\
     Track when and where new 56123 kiosks entered (2024–Jun 2025) and highlight hotspot areas by month and subzone.
+
 -   **Examine Infrastructure Proximity \***\
-    Test whether kiosks concentrate near **MRT stations, malls, and schools** (buffer analysis; simple statistical tests).
--   **Identify Temporal Waves**\
-    Apply spatio-temporal KDE (STKDE) to reveal waves of kiosk entry (e.g., CBD/malls first, then diffusion to heartlands).
--   **Derive Planning Insights**\
-    Translate findings into implications for **zoning/tenant-mix**, **transit-oriented clustering management**, curb/logistics planning, and **SME support**.
+    Test whether kiosks concentrate near MRT stations(buffer analysis; simple statistical tests).
 
 ## **2. Data Wrangling**
 
 ```{r}
 
-pacman::p_load(readr, dplyr, tidyr, stringr, lubridate,terra,spatstat,
-               sf, tmap, units, httr, jsonlite, tidyverse,rvest, ggthemes, ployly, ggplot2)
+pacman::p_load(readr, dplyr, tidyr, stringr, lubridate,terra,spatstat, sparr, sf, stpp, tmap, units, httr, jsonlite, tidyverse,rvest, ggthemes, ployly, ggplot2)
 
 ```
 
@@ -293,7 +290,7 @@ class(biz_56123_ppp)
 summary(biz_56123_ppp)
 ```
 
-### **Creating *owin* object and combining point events**
+#### **Creating *owin* object and combining point events**
 
 ```{r}
 sg_owin <- as.owin(mpsz_cl)
@@ -304,7 +301,7 @@ class(sg_owin)
 biz56123_sg_ppp = biz_56123_ppp [sg_owin]
 ```
 
-#### **3.1 Clark-Evan Test with CSR for Nearest Neighbour Analysis**
+### **3.1 Clark-Evan Test with CSR for Nearest Neighbour Analysis**
 
 ```{r}
 clarkevans.test(biz56123_sg_ppp,
@@ -322,7 +319,7 @@ clarkevans.test(biz56123_sg_ppp,
 
     Food kiosks are **much closer together** than random—i.e., **strongly clustered**, not evenly spread across Singapore.
 
-#### **3.2 Kernel Density Method**
+### **3.2 Kernel Density Method**
 
 ```{r}
 biz56123sg_ppp_km <- rescale.ppp(biz56123_sg_ppp, 1000, "km")
@@ -406,7 +403,7 @@ tm_shape(kde_biz56123sg_bw_terra) +
 
 -   Peaks are **highly localized** (small bright cells) while the **mean surface is low**, indicating concentrated clusters rather than broad uniform coverage—**consistent with Clark-Evans result (R≈0.51)** that showed strong clustering.
 
-#### **3.3 First Order SPPA at the Planning Subzone Level (Sembawang, Ang Mo Kio & Bishan, Punggol & Sengkang, Downtown Core, Jurong West & Jurong East)**
+### **3.3 First Order SPPA at the Planning Subzone Level (Sembawang, Ang Mo Kio & Bishan, Punggol & Sengkang, Downtown Core, Jurong West & Jurong East)**
 
 ```{r}
 sbw <- mpsz_cl %>%
@@ -559,7 +556,7 @@ ttl <- bquote(atop("Kiosks per km"^2, .(names(ppps)[i])))
 
 ```
 
-#### **3.4 Second-order Spatial Point Patterns Analysis**
+### **3.4 Second-order Spatial Point Patterns Analysis**
 
 ***G Function Estimation (for Sembawang)***
 
@@ -570,16 +567,16 @@ set.seed(1234)
 ```{r}
 
 G_SBW = Gest(biz56123_sbw_ppp, correction = "border")
-plot(G_SBW, xlim=c(0,500))
+
 
 
 ```
 
 To confirm the observed spatial patterns above, a hypothesis test will be conducted. The hypothesis and test are as follows:
 
-Ho = The distribution of food kiosks at Yishun are randomly distributed.
+Ho = The distribution of food kiosks at Sembawang are randomly distributed.
 
-H1= The distribution of food kiosks at Yishun are not randomly distributed.
+H1= The distribution of food kiosks at Sembawang are not randomly distributed.
 
 The null hypothesis will be rejected if p-value is smaller than alpha value of 0.001.
 
@@ -604,39 +601,53 @@ L_pg_sk= Lest(biz56123_pg_sk_ppp, correction = "Ripley")
 L_jw_je= Lest(biz56123_jw_je_ppp, correction = "Ripley")
 L_dc= Lest(biz56123_dc_ppp, correction = "Ripley")
 
+
+```
+
+```{r}
+
 set.seed(1234)
 L_sbw.csr <- envelope(biz56123_sbw_ppp, Lest, 
                      nsim = 99, 
                      rank = 1, 
-                      global=TRUE)
+                    glocal=TRUE)
 
 
 set.seed(1234)
 L_amk_bs.csr <- envelope(biz56123_amk_bs_ppp, Lest, 
                      nsim = 99, 
                      rank = 1, 
-                     global=TRUE)
+                     glocal=TRUE)
 
 
 set.seed(1234)
 L_pg_sk.csr <- envelope(biz56123_pg_sk_ppp, Lest, 
                      nsim = 99, 
                      rank = 1, 
-                     global=TRUE)
+                     glocal=TRUE)
 
 
 set.seed(1234)
 L_jw_je.csr <- envelope(biz56123_jw_je_ppp, Lest, 
                      nsim = 99, 
                      rank = 1, 
-                     global=TRUE)
+                     glocal=TRUE)
 
 
 set.seed(1234)
 L_dc.csr <- envelope(biz56123_dc_ppp, Lest, 
                      nsim = 99, 
                      rank = 1, 
-                     global=TRUE)
+                     glocal=TRUE)
+
+
+
+
+
+
+
+
+
 ```
 
 ```{r}
@@ -721,18 +732,16 @@ if (nrow(L_sbw_csr_df[L_sbw_csr_df$obs > L_sbw_csr_df$hi,]) == 0) {
 
 p  # print the plotly object
 
-
 #Hiding the code for the rest
-
 ```
 
 **Insights:**
 
--   The black curve **L(r)−r is \> 0** across the whole range → kiosks are **not** evenly spaced; they aggregate.
+-   The black curve L(r) − r L(r) is \> 0 across the distance range → food kiosks in Sembawang tend to aggregate rather than spread evenly.
 
--   **Statistically significant clustering:** The curve sits **above the global CSR envelope** from **r ≈ 0 to \~480 m**
+-   Statistically significant clustering: The curve lies above the global CSR envelope from approximately r≈0 meters to about 600 meters.
 
--   **Sembawang:** **≈50%** of the tested distance range (≈0–480 m out of ≈0–950 m) shows **significant clustering** of kiosks.
+-   This clustering aligns with localized commercial hubs, high foot traffic areas such as Bukit Canberra Hawker Centre, and community facilities in Sembawang
 
 ```{r}
 #| echo: false 
@@ -815,15 +824,11 @@ p   # render the plotly object
 
 **Insights:**
 
-The curve **L(r) − r \> 0** across the domain → kiosks are **clustered rather than evenly spaced**.
+-   The curve L(r) − r is greater than 0 throughout the analyzed range, indicating that food kiosks in Ang Mo Kio and Bishan are not distributed evenly, but instead exhibit a tendency to aggregate.
 
-**Significant clustering windows (global envelope):**
+-   Statistically significant clustering: The curve sits above the global CSR envelope from r≈0 to about 1180 meters, demonstrating strong clustering at these spatial scales.
 
--   **Short range:** \~**0–250 m** — strong neighbourhood-scale clustering around town-centre/MRT/mall nodes.
-
--   **Mid range:** \~**560–740 m** — excess pairs at sub-kilometre separation, consistent with **multiple nearby nodes** within one study window.
-
--   **Ang Mo Kio & Bishan:** **≈35%** of the tested distance range (about **0–250 m** and **560–740 m** out of \~0–1.2 km) shows **significant clustering** of kiosks.
+-   Ang Mo Kio and Bishan: **Approximately 90% of the studied distance range (0–1100 m out of 0–1180 m) shows significant clustering of kiosks.**
 
 ```{r}
 #| echo: false 
@@ -903,12 +908,11 @@ p  # render the interactive plot
 
 **Insights:**
 
--   The curve **L(r) − r \> 0 across the whole domain** → kiosks are **aggregated** (not evenly spaced).
+-   The curve **L(r) − r** remains above zero throughout most distances, confirming that food kiosks in Punggol and Sengkang tend to aggregate.
 
--   The observed curve lies **above the CSR envelope from \~10 m to \~110 m** (nearly the entire tested range).\
-    ⇒ **strong, statistically significant clustering at very short distances**—kiosks tend to co-locate within the same mall/station complex or adjacent shop lines.
+-   Statistically significant clustering occurs over several distinct distance intervals where the blue line (significant clustering indicator) appears: approximately 0–420 m, 500 -540 m, above 1100m.
 
--   **Punggol & Sengkang:** **≈90%** of the tested distance range (**\~10–110 m of \~0–120 m**) shows **significant clustering**.
+-   These on/off clustering patterns suggest Food Kiosks hotspots spaced by areas of lower kiosk density, possibly reflecting residential clusters and commercial centers separated by less active zones.
 
 ```{r}
 #| echo: false 
@@ -988,14 +992,13 @@ p  # render the interactive plot
 
 **Insights:**
 
--   The curve **L(r) − r is positive for almost the entire distance range**, so kiosks are **aggregated** rather than evenly spaced.
+-   The curve **L(r) − r** rises above zero and the CSR envelope, indicating aggregation of food kiosks in Jurong West and Jurong East.
 
-<!-- -->
+-   Statistically significant clustering (as shown by the continuous blue bar) is observed primarily at larger distances, from roughly 1100 m up to the maximum studied distance of 1800 m.
 
--    The observed curve lies **above the CSR envelope from roughly \~80 m to \~1.85 km**, with only a very short segment near the origin inside the envelope.\
-    ⇒ **Strong, statistically significant clustering** from neighbourhood to corridor scale.
+-   There is an "off" period at lower distances (from 0 to \~1100 m), where clustering is not statistically significant.
 
--   **Jurong West & Jurong East:** **\~95%** of the tested distance range shows **significant clustering** of kiosks.
+-   This pattern suggests kiosk clusters occur at broader spatial scales in Jurong, likely reflecting a few major commercial hubs, shopping precincts, or transport interchanges separated by less dense areas.
 
 ```{r}
 #| echo: false 
@@ -1081,3 +1084,135 @@ p  # render the interactive plot
     ⇒ **No statistically significant departure from CSR** at the tested alpha (i.e., **clustering is not significant** under the global envelope test).
 
 ## **4. Objective: Map Spatio-Temporal Distribution**
+
+```{r}
+month_seq <- seq(as.Date("2024-01-01"), as.Date("2025-06-01"), by = "month")
+
+df_month <- biz_56123_sf %>%
+  filter(date >= as.Date("2024-01-01"),
+         date <= as.Date("2025-06-30")) %>%
+  mutate(MONTH_START = floor_date(date, "month"),
+         MONTH_YR    = factor(format(MONTH_START, "%b-%Y"),
+                              levels = format(month_seq, "%b-%Y"))) %>%
+  count(MONTH_YR, name = "registrations") %>%
+  complete(MONTH_YR, fill = list(registrations = 0)) %>%
+  arrange(MONTH_YR)
+
+y_max <- max(df_month$registrations, na.rm = TRUE) * 1.10
+
+p_month_bar <- ggplot(df_month, aes(x = MONTH_YR, y = registrations, group = 1)) +
+  geom_col(fill = "lightblue") +
+  geom_text(aes(label = registrations), vjust = -0.5, size = 3.5) +
+  geom_line(color = "red", linewidth = 1) +      # green trend line
+  geom_point(color = "red") +                    # green points (optional)
+  labs(
+    title = "New Food Kiosks by Month (Jan 2024 – Jun 2025)",
+    x = "Month", y = "Registrations"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  expand_limits(y = y_max)
+
+p_month_bar
+
+
+```
+
+**Insights:**
+
+In early 2024, new food kiosk registrations in Singapore fluctuated but generally trended higher into 2025, peaking at 41 in May 2025. Noteworthy surges occurred in October 2024 and the first half of 2025, indicating increasing interest and market opportunity. Overall, the sector saw strong, sustained growth from late 2024 to mid-2025, reflecting rising entrepreneur interest and possibly favorable market or policy conditions.
+
+```{r}
+sg_poly_32748 <- mpsz_cl %>%
+  st_make_valid() %>%
+  st_union() %>%                  
+  st_transform(32748)
+
+sg_owin <- as.owin(sg_poly_32748)
+```
+
+```{r}
+biz_56123_sf32748 <- biz_56123_sf %>%
+  st_zm(drop = TRUE, what = "ZM") %>%
+  st_transform(32748)
+
+
+```
+
+```{r}
+biz_56123_sf32748 <- biz_56123_sf32748  %>% 
+  mutate(DayofYear = yday(date)) %>%
+  mutate(Month_num = month(date)) %>%
+  mutate(Month_fac = month(date, 
+                           label = TRUE, 
+                           abbr = FALSE))
+```
+
+### **4.1 Visualising geographic distribution of New Food Kiosks by month**
+
+```{r}
+#| fig-width: 8
+#| fig-height: 8
+tm_shape(sg_poly_32748 )+
+  tm_polygons() +
+tm_shape(biz_56123_sf32748 ) +
+  tm_dots(size = 0.08, col = "black") +
+tm_facets(by="Month_fac", 
+            free.coords=FALSE, 
+            drop.units = TRUE)
+```
+
+### **4.2 Computing Spatio-temporal Point Patterns Analysis: stpp methods**
+
+
+```{r}
+biz_56123_stpp <- biz_56123_sf %>% 
+  mutate(
+    DayofYear = yday(date),
+    Month_num = month(date),
+    Month_fac = month(date, label = TRUE, abbr = FALSE),
+    # DD
+    x = st_coordinates(geometry)[, 1],
+    y = st_coordinates(geometry)[, 2]
+  ) %>%
+  distinct(x, y, date, .keep_all = TRUE) %>%  
+  select(-x, -y)        
+      
+```
+
+```{r}
+coords <- st_coordinates(biz_56123_stpp)
+xyt <- data.frame(
+  x = coords[,1],
+  y = coords[,2],
+  t = as.integer(biz_56123_stpp$Month_fac)
+)
+
+```
+
+
+
+```{r}
+xyt_all <- as.3dpoints(xyt)
+ 
+```
+
+```{r}
+plot(xyt_all)
+```
+
+
+```{r}
+
+stpp_stik <- STIKhat(xyt_all)
+```
+
+```{r}
+plotK(stpp_stik)
+```
+
+**Insights**\
+The spatio-temporal K-function (STIKhat) for food kiosks (SSIC 56123) in Singapore (Jan 2024–Jun 2025) shows clear clustering at short spatial and temporal lags**—i.e., new kiosks tend to open near one another (≈≤1–2 km)** and within the same or adjacent months, consistent with bursty, centre-based expansion (malls, town centres, transport nodes). During estimation, the tool flags duplicated points. These arise when several kiosks share the exact address and month .
