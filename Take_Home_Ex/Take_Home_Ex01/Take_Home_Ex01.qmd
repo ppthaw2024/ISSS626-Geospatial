@@ -1167,7 +1167,6 @@ tm_facets(by="Month_fac",
 
 ### **4.2 Computing Spatio-temporal Point Patterns Analysis: stpp methods**
 
-
 ```{r}
 biz_56123_stpp <- biz_56123_sf %>% 
   mutate(
@@ -1193,8 +1192,6 @@ xyt <- data.frame(
 
 ```
 
-
-
 ```{r}
 xyt_all <- as.3dpoints(xyt)
  
@@ -1204,7 +1201,6 @@ xyt_all <- as.3dpoints(xyt)
 plot(xyt_all)
 ```
 
-
 ```{r}
 
 stpp_stik <- STIKhat(xyt_all)
@@ -1213,6 +1209,8 @@ stpp_stik <- STIKhat(xyt_all)
 ```{r}
 plotK(stpp_stik)
 ```
+
+![](images/kst.png){fig-align="center"}
 
 **Insights**\
 The spatio-temporal K-function (STIKhat) for food kiosks (SSIC 56123) in Singapore (Jan 2024–Jun 2025) shows clear clustering at short spatial and temporal lags**—i.e., new kiosks tend to open near one another (≈≤1–2 km)** and within the same or adjacent months, consistent with bursty, centre-based expansion (malls, town centres, transport nodes). During estimation, the tool flags duplicated points. These arise when several kiosks share the exact address and month .
