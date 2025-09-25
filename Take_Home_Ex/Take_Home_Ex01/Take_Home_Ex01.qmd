@@ -23,7 +23,7 @@ From **Jan 2024 to Jun 2025**, Singapore saw rapid growth of **food kiosks (SSIC
     Track when and where new 56123 kiosks entered (2024–Jun 2025) and highlight hotspot areas by month and subzone.
 
 -   **Examine Infrastructure Proximity \***\
-    Test whether kiosks concentrate near MRT stations(buffer analysis; simple statistical tests).
+    Test whether kiosks concentrate near MRT stations(buffer analysis)
 
 ## **2. Data Wrangling**
 
@@ -1214,3 +1214,63 @@ plotK(stpp_stik)
 
 **Insights**\
 The spatio-temporal K-function (STIKhat) for food kiosks (SSIC 56123) in Singapore (Jan 2024–Jun 2025) shows clear clustering at short spatial and temporal lags**—i.e., new kiosks tend to open near one another (≈≤1–2 km)** and within the same or adjacent months, consistent with bursty, centre-based expansion (malls, town centres, transport nodes). During estimation, the tool flags duplicated points. These arise when several kiosks share the exact address and month .
+
+## 5. Objective: Examine Infrastructure Proximity
+
+```{r}
+
+library(units)
+kiosks <- st_transform(biz_56123_sf, crs = 3414)
+mrt <- st_transform(mrt, crs = 3414)
+
+# Compute nearest MRT station for each kiosk
+nearest_mrt_idx <- st_nearest_feature(kiosks, mrt)
+
+# Compute distances to nearest MRT stations
+kiosks$dist_to_mrt <- st_distance(kiosks, mrt[nearest_mrt_idx, ], by_element = TRUE)
+
+# Summary statistics of distance
+summary(kiosks$dist_to_mrt)
+
+# Define buffer distance (e.g.,600) and count kiosks within buffers
+buffer_dist <- units::set_units(600, "meters")
+mrt_buffers <- st_buffer(mrt, dist = buffer_dist)
+
+kiosks$within_buffer <- st_intersects(kiosks, mrt_buffers, sparse = FALSE)[,1]
+
+table(kiosks$within_buffer)
+
+
+
+
+```
+
+The data shows that almost all food kiosks in this sample are more than 600 meters (about a 7-minute walk) from the nearest MRT station—only 3 kiosks are found within this walking distance. The average kiosk is about 567 meters (approximately a 6-minute walk) away from an MRT, and the typical (median) kiosk is about 440 meters (roughly a 5-minute walk) away. This means most kiosks are not located right next to MRT stations, but are instead spread out across neighborhoods.
+
+## Key Takeaways:
+
+-   **Kiosks are unequivocally clustered.**\
+
+    Across Singapore, point-pattern tests reject complete spatial randomness. The Clark–Evans statistic is well below 1 (R≈0.51) with a tiny p-value, indicating strong clustering rather than an even spread. This holds up across multiple methods (nearest-neighbour, KDE “hotspots”, and L-functions).
+
+-   **Subzone patterns differ—plan by context, not citywide averages.**
+
+    **Sembawang:** clear short-range clustering (≈ ≤400–500 m) → town-centre/mall gravity.
+
+    -   **Punggol & Sengkang:** pronounced clustering at **very short** distances (≈ ≤100–150 m), typical of dense hub-and-spoke mall layouts.
+
+        **Ang Mo Kio & Bishan:** pockets of clustering around **150–250 m**, with weaker, broader grouping around **600–750 m** (multiple centres).
+
+        **Jurong West & Jurong East:** no statistically significant clustering at the tested scales—**more even spread** across the area.
+
+        **Downtown Core:** dense but **statistically near-random** at the tested radii—supply is saturated and spatially regulated within a compact grid.
+
+-   **Hotspots form at short walking scales—and quickly.**\
+
+    The spatio-temporal K (STIK) shows elevated intensity at small spatial radii and short time gaps: when one kiosk appears, more tend to follow within a few hundred metres and within a few months. This is consistent with mall/transport-node co-location and fast copy-cat entries.
+
+Based on the hotspot patterns, policy and operations should tighten controls at saturated nodes while nudging growth to under-served areas. Practically, agencies can apply 150–250 m “control rings” around red-hot MRT/mall clusters and approve new kiosk licences only with a queue management and cleaning plan, while prioritising permits outside peak-KDE cells in the same town to disperse footfall.
+
+At these high-pressure nodes, curb and streets operations should shift deliveries to off-peak windows, introduce short-stay micro-loading bays, and remove walkway bottlenecks by reallocating space and placing bins where queues form—paired with higher cleaning cadence during peak hours.
+
+In parallel, economic development efforts should steer grants or temporary pop-up permits to heartland gaps (e.g., parts of Jurong West/East) to improve access, while in already dense towns support should pivot toward product differentiation and a balanced brand mix so new entrants add variety rather than intensifying head-to-head cannibalisation.
