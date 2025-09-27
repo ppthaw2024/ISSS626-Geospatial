@@ -1,0 +1,84 @@
+---
+title: "Hands-on Exercise 05a:  Global Measures of Spatial Autocorrelation"
+author: "Pwint Phoo Thaw"
+date: "September 27,2025"
+date-modified: "last-modified"
+execute:
+  echo: true
+  eva: true
+  warning: false
+  freeze: true
+---
+
+## **9.1 Overview**
+
+This hands_on exercise is to compute Global Measures of Spatial Autocorrelation (GMSA) by using **spdep** package. By the end to this hands-on exercise, you will be able to:
+
+-   import geospatial data using appropriate function(s) of **sf** package,
+
+-   import csv file using appropriate function of **readr** package,
+
+-   perform relational join using appropriate join function of **dplyr** package,
+
+-   compute Global Spatial Autocorrelation (GSA) statistics by using appropriate functions of **spdep** package,
+
+    -   plot Moran scatterplot,
+
+    -   compute and plot spatial correlogram using appropriate function of **spdep** package.
+
+-   provide statistically correct interpretation of GSA statistics.
+
+## **9.2 Getting Started**
+
+### **9.2.1 The analytical question**
+
+In spatial policy, one of the main development objective of the local government and planners is to ensure equal distribution of development in the province. Our task in this study, hence, is to apply appropriate spatial statistical methods to discover if development are even distributed geographically. If the answer is **No**. Then, our next question will be “is there sign of spatial clustering?”. And, if the answer for this question is yes, then our next question will be “where are these clusters?”
+
+In this case study, we are interested to examine the spatial pattern of a selected development indicator (i.e. GDP per capita) of [Hunan Provice](https://en.wikipedia.org/wiki/Hunan), People Republic of China.
+
+### **9.2.2 The Study Area and Data**
+
+Two data sets will be used in this hands-on exercise, they are:
+
+-   Hunan province administrative boundary layer at county level. This is a geospatial data set in ESRI shapefile format.
+
+-   Hunan_2012.csv: This csv file contains selected Hunan’s local development indicators in 2012.
+
+### **9.2.3 Setting the Analytical Toolls**
+
+```{r}
+pacman::p_load(sf, spdep, tmap, tidyverse)
+```
+
+### **9.3.1 Import shapefile into r environment**
+
+The code chunk below uses [`st_read()`](https://r-spatial.github.io/sf/reference/st_read.html) of **sf** package to import Hunan shapefile into R. The imported shapefile will be **simple features** Object of **sf**.
+
+## **9.3 Getting the Data Into R Environment**
+
+### **9.3.1 Import shapefile into r environment**
+
+```{r}
+hunan <- st_read(dsn = "data/geospatial", 
+                 layer = "Hunan")
+```
+
+### **9.3.2 Import csv file into r environment**
+
+```{r}
+hunan2012 <- read_csv("data/aspatial/Hunan_2012.csv")
+```
+
+### **9.3.3 Performing relational join**
+
+```{r}
+hunan <- left_join(hunan,hunan2012) %>%
+  select(1:4, 7, 15)
+```
+
+### **9.3.4 Visualising Regional Development Indicator**
+
+Now, we are going to prepare a basemap and a choropleth map showing the distribution of GDPPC 2012 by using `qtm()` of **tmap** package.
+
+```{}
+```
