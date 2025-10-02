@@ -157,6 +157,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="dropdown-item" href="../../Hands_on_Ex/Hands_on_Ex04/Hands_on_Ex05a.html">
  <span class="dropdown-text">Hands-on Exercise 5</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="../../Hands_on_Ex/Hands_on_Ex04/Hands_on_Ex05b.html">
+ <span class="dropdown-text">Hands-on Exercise 5 Part 2</span></a>
+  </li>  
     </ul>
   </li>
   <li class="nav-item dropdown ">
@@ -219,20 +223,25 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview"><strong>9.1 Overview</strong></a></li>
-  <li><a href="#getting-started" id="toc-getting-started" class="nav-link" data-scroll-target="#getting-started"><strong>9.2 Getting Started</strong></a>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">1 Overview</a></li>
+  <li><a href="#importing-the-data" id="toc-importing-the-data" class="nav-link" data-scroll-target="#importing-the-data">2 Importing the Data</a>
   <ul class="collapse">
-  <li><a href="#the-analytical-question" id="toc-the-analytical-question" class="nav-link" data-scroll-target="#the-analytical-question"><strong>9.2.1 The analytical question</strong></a></li>
-  <li><a href="#the-study-area-and-data" id="toc-the-study-area-and-data" class="nav-link" data-scroll-target="#the-study-area-and-data"><strong>9.2.2 The Study Area and Data</strong></a></li>
-  <li><a href="#setting-the-analytical-toolls" id="toc-setting-the-analytical-toolls" class="nav-link" data-scroll-target="#setting-the-analytical-toolls"><strong>9.2.3 Setting the Analytical Toolls</strong></a></li>
-  <li><a href="#import-shapefile-into-r-environment" id="toc-import-shapefile-into-r-environment" class="nav-link" data-scroll-target="#import-shapefile-into-r-environment"><strong>9.3.1 Import shapefile into r environment</strong></a></li>
+  <li><a href="#importing-the-shapefile" id="toc-importing-the-shapefile" class="nav-link" data-scroll-target="#importing-the-shapefile">2.1 Importing the Shapefile</a></li>
+  <li><a href="#importing-the-csv-file" id="toc-importing-the-csv-file" class="nav-link" data-scroll-target="#importing-the-csv-file">2.2 Importing the csv file</a></li>
+  <li><a href="#performing-a-relational-join" id="toc-performing-a-relational-join" class="nav-link" data-scroll-target="#performing-a-relational-join">2.3 Performing a Relational Join</a></li>
+  <li><a href="#visualising-the-regional-development-indicator" id="toc-visualising-the-regional-development-indicator" class="nav-link" data-scroll-target="#visualising-the-regional-development-indicator">2.4 Visualising the Regional Development Indicator</a></li>
   </ul></li>
-  <li><a href="#getting-the-data-into-r-environment" id="toc-getting-the-data-into-r-environment" class="nav-link" data-scroll-target="#getting-the-data-into-r-environment"><strong>9.3 Getting the Data Into R Environment</strong></a>
+  <li><a href="#global-measures-of-spatial-autocorrelation" id="toc-global-measures-of-spatial-autocorrelation" class="nav-link" data-scroll-target="#global-measures-of-spatial-autocorrelation">3 Global Measures of Spatial Autocorrelation</a>
   <ul class="collapse">
-  <li><a href="#import-shapefile-into-r-environment-1" id="toc-import-shapefile-into-r-environment-1" class="nav-link" data-scroll-target="#import-shapefile-into-r-environment-1"><strong>9.3.1 Import shapefile into r environment</strong></a></li>
-  <li><a href="#import-csv-file-into-r-environment" id="toc-import-csv-file-into-r-environment" class="nav-link" data-scroll-target="#import-csv-file-into-r-environment"><strong>9.3.2 Import csv file into r environment</strong></a></li>
-  <li><a href="#performing-relational-join" id="toc-performing-relational-join" class="nav-link" data-scroll-target="#performing-relational-join"><strong>9.3.3 Performing relational join</strong></a></li>
-  <li><a href="#visualising-regional-development-indicator" id="toc-visualising-regional-development-indicator" class="nav-link" data-scroll-target="#visualising-regional-development-indicator"><strong>9.3.4 Visualising Regional Development Indicator</strong></a></li>
+  <li><a href="#computing-contiguity-spatial-weights" id="toc-computing-contiguity-spatial-weights" class="nav-link" data-scroll-target="#computing-contiguity-spatial-weights">3.1 Computing Contiguity Spatial Weights</a></li>
+  <li><a href="#row-standardised-weights-matrix" id="toc-row-standardised-weights-matrix" class="nav-link" data-scroll-target="#row-standardised-weights-matrix">3.2 Row-standardised weights matrix</a></li>
+  <li><a href="#global-measures-of-spatial-autocorrelation-morans-i" id="toc-global-measures-of-spatial-autocorrelation-morans-i" class="nav-link" data-scroll-target="#global-measures-of-spatial-autocorrelation-morans-i">3.3 Global Measures of Spatial Autocorrelation: Moran’s I</a></li>
+  <li><a href="#global-measures-of-spatial-autocorrelation-gearys-c" id="toc-global-measures-of-spatial-autocorrelation-gearys-c" class="nav-link" data-scroll-target="#global-measures-of-spatial-autocorrelation-gearys-c">3.4 Global Measures of Spatial Autocorrelation: Geary’s C</a></li>
+  </ul></li>
+  <li><a href="#spatial-correlogram" id="toc-spatial-correlogram" class="nav-link" data-scroll-target="#spatial-correlogram">4 Spatial Correlogram</a>
+  <ul class="collapse">
+  <li><a href="#compute-morans-i-correlogram" id="toc-compute-morans-i-correlogram" class="nav-link" data-scroll-target="#compute-morans-i-correlogram">4.1 Compute Moran’s I correlogram</a></li>
+  <li><a href="#compute-gearys-c-correlogram-and-plot" id="toc-compute-gearys-c-correlogram-and-plot" class="nav-link" data-scroll-target="#compute-gearys-c-correlogram-and-plot">4.2 Compute Geary’s C correlogram and plot</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -266,7 +275,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Modified</div>
     <div class="quarto-title-meta-contents">
-      <p class="date-modified">September 27, 2025</p>
+      <p class="date-modified">October 2, 2025</p>
     </div>
   </div>
     
@@ -278,7 +287,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <section id="overview" class="level2">
-<h2 class="anchored" data-anchor-id="overview"><strong>9.1 Overview</strong></h2>
+<h2 class="anchored" data-anchor-id="overview">1 Overview</h2>
 <p>This hands_on exercise is to compute Global Measures of Spatial Autocorrelation (GMSA) by using <strong>spdep</strong> package. By the end to this hands-on exercise, you will be able to:</p>
 <ul>
 <li><p>import geospatial data using appropriate function(s) of <strong>sf</strong> package,</p></li>
@@ -289,39 +298,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><p>plot Moran scatterplot,</p></li>
 <li><p>compute and plot spatial correlogram using appropriate function of <strong>spdep</strong> package.</p></li>
 </ul></li>
-<li><p>provide statistically correct interpretation of GSA statistics.</p></li>
+<li><p>provide statistically correct interpretation of GSA statistics.<code>spdep</code>: compute spatial weights and global and local spatial autocorrelation statistics</p></li>
 </ul>
-</section>
-<section id="getting-started" class="level2">
-<h2 class="anchored" data-anchor-id="getting-started"><strong>9.2 Getting Started</strong></h2>
-<section id="the-analytical-question" class="level3">
-<h3 class="anchored" data-anchor-id="the-analytical-question"><strong>9.2.1 The analytical question</strong></h3>
-<p>In spatial policy, one of the main development objective of the local government and planners is to ensure equal distribution of development in the province. Our task in this study, hence, is to apply appropriate spatial statistical methods to discover if development are even distributed geographically. If the answer is <strong>No</strong>. Then, our next question will be “is there sign of spatial clustering?”. And, if the answer for this question is yes, then our next question will be “where are these clusters?”</p>
-<p>In this case study, we are interested to examine the spatial pattern of a selected development indicator (i.e.&nbsp;GDP per capita) of <a href="https://en.wikipedia.org/wiki/Hunan">Hunan Provice</a>, People Republic of China.</p>
-</section>
-<section id="the-study-area-and-data" class="level3">
-<h3 class="anchored" data-anchor-id="the-study-area-and-data"><strong>9.2.2 The Study Area and Data</strong></h3>
-<p>Two data sets will be used in this hands-on exercise, they are:</p>
-<ul>
-<li><p>Hunan province administrative boundary layer at county level. This is a geospatial data set in ESRI shapefile format.</p></li>
-<li><p>Hunan_2012.csv: This csv file contains selected Hunan’s local development indicators in 2012.</p></li>
-</ul>
-</section>
-<section id="setting-the-analytical-toolls" class="level3">
-<h3 class="anchored" data-anchor-id="setting-the-analytical-toolls"><strong>9.2.3 Setting the Analytical Toolls</strong></h3>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(sf, spdep, tmap, tidyverse)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="import-shapefile-into-r-environment" class="level3">
-<h3 class="anchored" data-anchor-id="import-shapefile-into-r-environment"><strong>9.3.1 Import shapefile into r environment</strong></h3>
-<p>The code chunk below uses <a href="https://r-spatial.github.io/sf/reference/st_read.html"><code>st_read()</code></a> of <strong>sf</strong> package to import Hunan shapefile into R. The imported shapefile will be <strong>simple features</strong> Object of <strong>sf</strong>.</p>
-</section>
-</section>
-<section id="getting-the-data-into-r-environment" class="level2">
-<h2 class="anchored" data-anchor-id="getting-the-data-into-r-environment"><strong>9.3 Getting the Data Into R Environment</strong></h2>
-<section id="import-shapefile-into-r-environment-1" class="level3">
-<h3 class="anchored" data-anchor-id="import-shapefile-into-r-environment-1"><strong>9.3.1 Import shapefile into r environment</strong></h3>
+<section id="importing-the-data" class="level2">
+<h2 class="anchored" data-anchor-id="importing-the-data">2 Importing the Data</h2>
+<section id="importing-the-shapefile" class="level3">
+<h3 class="anchored" data-anchor-id="importing-the-shapefile">2.1 Importing the Shapefile</h3>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>hunan <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="at">dsn =</span> <span class="st">"data/geospatial"</span>, </span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>                 <span class="at">layer =</span> <span class="st">"Hunan"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -337,23 +323,357 @@ Geodetic CRS:  WGS 84</code></pre>
 </div>
 </div>
 </section>
-<section id="import-csv-file-into-r-environment" class="level3">
-<h3 class="anchored" data-anchor-id="import-csv-file-into-r-environment"><strong>9.3.2 Import csv file into r environment</strong></h3>
+<section id="importing-the-csv-file" class="level3">
+<h3 class="anchored" data-anchor-id="importing-the-csv-file">2.2 Importing the csv file</h3>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>hunan2012 <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/aspatial/Hunan_2012.csv"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="performing-relational-join" class="level3">
-<h3 class="anchored" data-anchor-id="performing-relational-join"><strong>9.3.3 Performing relational join</strong></h3>
+<section id="performing-a-relational-join" class="level3">
+<h3 class="anchored" data-anchor-id="performing-a-relational-join">2.3 Performing a Relational Join</h3>
+<p>The attribute table of <em>hunan</em>’s SpatialPolygonsDataFrame will be updated with the attribute fields of <em>hunan2012</em> dataframe.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>hunan <span class="ot">&lt;-</span> <span class="fu">left_join</span>(hunan,hunan2012) <span class="sc">%&gt;%</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="dv">7</span>, <span class="dv">15</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="visualising-regional-development-indicator" class="level3">
-<h3 class="anchored" data-anchor-id="visualising-regional-development-indicator"><strong>9.3.4 Visualising Regional Development Indicator</strong></h3>
-<p>Now, we are going to prepare a basemap and a choropleth map showing the distribution of GDPPC 2012 by using <code>qtm()</code> of <strong>tmap</strong> package.</p>
-<pre><code></code></pre>
+<section id="visualising-the-regional-development-indicator" class="level3">
+<h3 class="anchored" data-anchor-id="visualising-the-regional-development-indicator">2.4 Visualising the Regional Development Indicator</h3>
+<p>A base map and choropleth map will be plotted, showing the distribution of GDPPC 2012.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>equal <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(hunan) <span class="sc">+</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_polygons</span>(<span class="at">fill =</span> <span class="st">"GDPPC"</span>,</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>              <span class="at">fill.scale =</span> <span class="fu">tm_scale_intervals</span>(</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>                <span class="at">style =</span> <span class="st">"equal"</span>,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>                <span class="at">n =</span> <span class="dv">5</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>                <span class="at">values =</span> <span class="st">"brewer.blues"</span>)) <span class="sc">+</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_borders</span>(<span class="at">fiil_alpha =</span> <span class="fl">0.5</span>) <span class="sc">+</span> </span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_layout</span>(<span class="at">legend.position =</span> <span class="fu">c</span>(<span class="st">"left"</span>, <span class="st">"bottom"</span>), </span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>            <span class="at">main.title =</span> <span class="st">"Equal interval classification"</span>)</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>quantile <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(hunan) <span class="sc">+</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_polygons</span>(<span class="at">fill =</span> <span class="st">"GDPPC"</span>,</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>              <span class="at">fill.scale =</span> <span class="fu">tm_scale_intervals</span>(</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>                <span class="at">style =</span> <span class="st">"quantile"</span>,</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>                <span class="at">n =</span> <span class="dv">5</span>)) <span class="sc">+</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_borders</span>(<span class="at">fiil_alpha =</span> <span class="fl">0.5</span>) <span class="sc">+</span> </span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_layout</span>(<span class="at">legend.position =</span> <span class="fu">c</span>(<span class="st">"left"</span>, <span class="st">"bottom"</span>), </span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>            <span class="at">main.title =</span> <span class="st">"Quantile classification"</span>)</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(equal, </span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>             quantile, </span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>             <span class="at">asp=</span><span class="dv">1</span>, </span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>             <span class="at">ncol=</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Hands_on_Ex05a_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="global-measures-of-spatial-autocorrelation" class="level2">
+<h2 class="anchored" data-anchor-id="global-measures-of-spatial-autocorrelation">3 Global Measures of Spatial Autocorrelation</h2>
+<p>The core concept of Spatial Autocorrelation relates to Tobler’s First Law of Geography, where “Everything is related to everything else, but near things are more related than distant things”.</p>
+<section id="computing-contiguity-spatial-weights" class="level3">
+<h3 class="anchored" data-anchor-id="computing-contiguity-spatial-weights">3.1 Computing Contiguity Spatial Weights</h3>
+<p>Spatial weights of a study area is required to compute the global spatial autocorrelation statistics.</p>
+<p><code>poly2nb()</code> of <strong>spdep</strong> package is used to compute contiguity weight matrices for the study area. For the below, Queen contiguity weight matrix is computed.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>wm_q <span class="ot">&lt;-</span> <span class="fu">poly2nb</span>(hunan, </span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>                <span class="at">queen=</span><span class="cn">TRUE</span>)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(wm_q)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Neighbour list object:
+Number of regions: 88 
+Number of nonzero links: 448 
+Percentage nonzero weights: 5.785124 
+Average number of links: 5.090909 
+Link number distribution:
+
+ 1  2  3  4  5  6  7  8  9 11 
+ 2  2 12 16 24 14 11  4  2  1 
+2 least connected regions:
+30 65 with 1 link
+1 most connected region:
+85 with 11 links</code></pre>
+</div>
+</div>
+<p>The summary report above shows that there are 88 area units in Hunan. The most connected area unit has 11 neighbours. There are two area units with only one neighbour.</p>
+</section>
+<section id="row-standardised-weights-matrix" class="level3">
+<h3 class="anchored" data-anchor-id="row-standardised-weights-matrix">3.2 Row-standardised weights matrix</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>rswm_q <span class="ot">&lt;-</span> <span class="fu">nb2listw</span>(wm_q, </span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>                   <span class="at">style=</span><span class="st">"W"</span>, </span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>                   <span class="at">zero.policy =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>rswm_q</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Characteristics of weights list object:
+Neighbour list object:
+Number of regions: 88 
+Number of nonzero links: 448 
+Percentage nonzero weights: 5.785124 
+Average number of links: 5.090909 
+
+Weights style: W 
+Weights constants summary:
+   n   nn S0       S1       S2
+W 88 7744 88 37.86334 365.9147</code></pre>
+</div>
+</div>
+</section>
+<section id="global-measures-of-spatial-autocorrelation-morans-i" class="level3">
+<h3 class="anchored" data-anchor-id="global-measures-of-spatial-autocorrelation-morans-i">3.3 Global Measures of Spatial Autocorrelation: Moran’s I</h3>
+<section id="marons-i-test" class="level4">
+<h4 class="anchored" data-anchor-id="marons-i-test">3.3.1 Maron’s I test</h4>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">moran.test</span>(hunan<span class="sc">$</span>GDPPC, </span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>           <span class="at">listw=</span>rswm_q, </span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>           <span class="at">zero.policy =</span> <span class="cn">TRUE</span>, </span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>           <span class="at">na.action=</span>na.omit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+    Moran I test under randomisation
+
+data:  hunan$GDPPC  
+weights: rswm_q    
+
+Moran I statistic standard deviate = 4.7351, p-value = 1.095e-06
+alternative hypothesis: greater
+sample estimates:
+Moran I statistic       Expectation          Variance 
+      0.300749970      -0.011494253       0.004348351 </code></pre>
+</div>
+</div>
+<p>Based on the results, Moran’s I is 0.301, indicating a strong positive spatial autocorrelation at the 99% confidence level.<br>
+</p>
+<p>This suggests that GDP per capita (GDPPC) is spatially clustered, with high-GDPPC counties generally located near other high-GDPPC counties, and low-GDPPC counties situated near other low-GDPPC counties.</p>
+</section>
+<section id="computing-monte-carlo-morans-i" class="level4">
+<h4 class="anchored" data-anchor-id="computing-monte-carlo-morans-i">3.3.2 Computing Monte Carlo Moran’s I</h4>
+<p>Using <code>moran.mc()</code>, 999 simulations will be performed for the Moran’s I statistic.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>bperm<span class="ot">=</span> <span class="fu">moran.mc</span>(hunan<span class="sc">$</span>GDPPC, </span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>                <span class="at">listw=</span>rswm_q, </span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>                <span class="at">nsim=</span><span class="dv">999</span>, </span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>                <span class="at">zero.policy =</span> <span class="cn">TRUE</span>, </span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>                <span class="at">na.action=</span>na.omit)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>bperm</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+    Monte-Carlo simulation of Moran I
+
+data:  hunan$GDPPC 
+weights: rswm_q  
+number of simulations + 1: 1000 
+
+statistic = 0.30075, observed rank = 1000, p-value = 0.001
+alternative hypothesis: greater</code></pre>
+</div>
+</div>
+</section>
+<section id="visualising-monte-carlo-morans-i" class="level4">
+<h4 class="anchored" data-anchor-id="visualising-monte-carlo-morans-i">3.3.3 Visualising Monte Carlo Moran’s I</h4>
+<p>From the simulations, we observe the test statistics using mean, variance and other distribution metrics.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(bperm<span class="sc">$</span>res[<span class="dv">1</span><span class="sc">:</span><span class="dv">999</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] -0.01504572</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">var</span>(bperm<span class="sc">$</span>res[<span class="dv">1</span><span class="sc">:</span><span class="dv">999</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.004371574</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(bperm<span class="sc">$</span>res[<span class="dv">1</span><span class="sc">:</span><span class="dv">999</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+-0.18339 -0.06168 -0.02125 -0.01505  0.02611  0.27593 </code></pre>
+</div>
+</div>
+<p>Using base graph to plot the values.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(bperm<span class="sc">$</span>res, </span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>     <span class="at">freq=</span><span class="cn">TRUE</span>, </span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">breaks=</span><span class="dv">20</span>, </span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab=</span><span class="st">"Simulated Moran's I"</span>)</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">v=</span><span class="dv">0</span>, </span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>       <span class="at">col=</span><span class="st">"red"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Hands_on_Ex05a_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Since Moran’s I is greater than the expected value E(I)E(I)E(I) under the null hypothesis of no spatial autocorrelation, the results indicate a stronger clustering pattern (positive spatial autocorrelation) than would be expected if the data were randomly distributed.</p>
+</section>
+</section>
+<section id="global-measures-of-spatial-autocorrelation-gearys-c" class="level3">
+<h3 class="anchored" data-anchor-id="global-measures-of-spatial-autocorrelation-gearys-c">3.4 Global Measures of Spatial Autocorrelation: Geary’s C</h3>
+<section id="gearys-c-test" class="level4">
+<h4 class="anchored" data-anchor-id="gearys-c-test">3.4.1 Geary’s C test</h4>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">geary.test</span>(hunan<span class="sc">$</span>GDPPC, <span class="at">listw=</span>rswm_q)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+    Geary C test under randomisation
+
+data:  hunan$GDPPC 
+weights: rswm_q   
+
+Geary C statistic standard deviate = 3.6108, p-value = 0.0001526
+alternative hypothesis: Expectation greater than statistic
+sample estimates:
+Geary C statistic       Expectation          Variance 
+        0.6907223         1.0000000         0.0073364 </code></pre>
+</div>
+</div>
+<p>The results show that Geary’s C is 0.691 (below 1), indicating strong positive spatial autocorrelation at the 99% confidence level.<br>
+</p>
+<p>This implies that GDP per capita (GDPPC) is spatially clustered, with high-GDPPC counties located close to other high-GDPPC counties, and low-GDPPC counties likewise concentrated near one another.</p>
+</section>
+<section id="computing-monte-carlo-gearys-c" class="level4">
+<h4 class="anchored" data-anchor-id="computing-monte-carlo-gearys-c">3.4.2 Computing Monte Carlo Geary’s C</h4>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>bperm<span class="ot">=</span><span class="fu">geary.mc</span>(hunan<span class="sc">$</span>GDPPC, </span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>               <span class="at">listw=</span>rswm_q, </span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>               <span class="at">nsim=</span><span class="dv">999</span>)</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>bperm</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+    Monte-Carlo simulation of Geary C
+
+data:  hunan$GDPPC 
+weights: rswm_q  
+number of simulations + 1: 1000 
+
+statistic = 0.69072, observed rank = 1, p-value = 0.001
+alternative hypothesis: greater</code></pre>
+</div>
+</div>
+<p>From the p-value = 0.001, we can conclude at a 99% confidence interval that we can reject the null hypothesis of no spatial autocorrelation.</p>
+</section>
+<section id="visualising-the-monte-carlo-gearys-c" class="level4">
+<h4 class="anchored" data-anchor-id="visualising-the-monte-carlo-gearys-c">3.4.3 Visualising the Monte Carlo Geary’s C</h4>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(bperm<span class="sc">$</span>res[<span class="dv">1</span><span class="sc">:</span><span class="dv">999</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 1.004402</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">var</span>(bperm<span class="sc">$</span>res[<span class="dv">1</span><span class="sc">:</span><span class="dv">999</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.007436493</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(bperm<span class="sc">$</span>res[<span class="dv">1</span><span class="sc">:</span><span class="dv">999</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.7142  0.9502  1.0052  1.0044  1.0595  1.2722 </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(bperm<span class="sc">$</span>res, <span class="at">freq=</span><span class="cn">TRUE</span>, <span class="at">breaks=</span><span class="dv">20</span>, <span class="at">xlab=</span><span class="st">"Simulated Geary c"</span>)</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">v=</span><span class="dv">1</span>, <span class="at">col=</span><span class="st">"red"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Hands_on_Ex05a_files/figure-html/unnamed-chunk-19-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+</section>
+<section id="spatial-correlogram" class="level2">
+<h2 class="anchored" data-anchor-id="spatial-correlogram">4 Spatial Correlogram</h2>
+<p>Spatial correlograms are great to examine patterns of spatial autocorrelation in your data or model residuals. They show how correlated are pairs of spatial observations when you increase the distance (lag) between them - they are plots of some index of autocorrelation (Moran’s I or Geary’s c) against distance.Although correlograms are not as fundamental as variograms (a keystone concept of geostatistics), they are very useful as an exploratory and descriptive tool. For this purpose they actually provide richer information than variograms.</p>
+<section id="compute-morans-i-correlogram" class="level3">
+<h3 class="anchored" data-anchor-id="compute-morans-i-correlogram">4.1 Compute Moran’s I correlogram</h3>
+<p><code>sp.correlogram()</code> from <strong>spdep</strong> is used to compute a 6-lag spatial correlogram of GDPPC. The global spatial autocorrelation method used is Moran’s I.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>MI_corr <span class="ot">&lt;-</span> <span class="fu">sp.correlogram</span>(wm_q, </span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>                          hunan<span class="sc">$</span>GDPPC, </span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>                          <span class="at">order=</span><span class="dv">6</span>, </span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>                          <span class="at">method=</span><span class="st">"I"</span>, </span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>                          <span class="at">style=</span><span class="st">"W"</span>)</span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(MI_corr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Hands_on_Ex05a_files/figure-html/unnamed-chunk-20-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(MI_corr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Spatial correlogram for hunan$GDPPC 
+method: Moran's I
+         estimate expectation   variance standard deviate Pr(I) two sided    
+1 (88)  0.3007500  -0.0114943  0.0043484           4.7351       2.189e-06 ***
+2 (88)  0.2060084  -0.0114943  0.0020962           4.7505       2.029e-06 ***
+3 (88)  0.0668273  -0.0114943  0.0014602           2.0496        0.040400 *  
+4 (88)  0.0299470  -0.0114943  0.0011717           1.2107        0.226015    
+5 (88) -0.1530471  -0.0114943  0.0012440          -4.0134       5.984e-05 ***
+6 (88) -0.1187070  -0.0114943  0.0016791          -2.6164        0.008886 ** 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
+</div>
+</div>
+<p>The spatial correlogram shows that Moran’s I declines as the lag increases (e.g., Lag 1: 0.301; Lag 2: 0.206). This suggests that strong and significant clustering occurs among immediate neighbors, but the clustering effect weakens and becomes insignificant as the distance increases.<br>
+</p>
+<p>At Lags 5 and 6, Moran’s I turns negative, indicating a dispersed pattern (or strong negative spatial autocorrelation) at greater distances.</p>
+</section>
+<section id="compute-gearys-c-correlogram-and-plot" class="level3">
+<h3 class="anchored" data-anchor-id="compute-gearys-c-correlogram-and-plot">4.2 Compute Geary’s C correlogram and plot</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>GC_corr <span class="ot">&lt;-</span> <span class="fu">sp.correlogram</span>(wm_q, </span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>                          hunan<span class="sc">$</span>GDPPC, </span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>                          <span class="at">order=</span><span class="dv">6</span>, </span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>                          <span class="at">method=</span><span class="st">"C"</span>, </span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>                          <span class="at">style=</span><span class="st">"W"</span>)</span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(GC_corr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Hands_on_Ex05a_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(GC_corr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Spatial correlogram for hunan$GDPPC 
+method: Geary's C
+        estimate expectation  variance standard deviate Pr(I) two sided    
+1 (88) 0.6907223   1.0000000 0.0073364          -3.6108       0.0003052 ***
+2 (88) 0.7630197   1.0000000 0.0049126          -3.3811       0.0007220 ***
+3 (88) 0.9397299   1.0000000 0.0049005          -0.8610       0.3892612    
+4 (88) 1.0098462   1.0000000 0.0039631           0.1564       0.8757128    
+5 (88) 1.2008204   1.0000000 0.0035568           3.3673       0.0007592 ***
+6 (88) 1.0773386   1.0000000 0.0058042           1.0151       0.3100407    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
+</div>
+</div>
+<p>Geary’s C is an inverse measure of spatial autocorrelation compared to Moran’s I, hence we see the similar outcome from the Geary’s C estimates.</p>
+<p>At Lag 1 and 2, Geary’s C &lt; 1, indicating strong positive autocorrelation. At Lag 3 and 4, Geary’s C ~ 1, which means there is no significant spatial autocorrelation. At Lag 5 and 6, Geary’s C &gt; 1, there is strong negative autocorrelation (dispersion).</p>
 
 
 </section>
