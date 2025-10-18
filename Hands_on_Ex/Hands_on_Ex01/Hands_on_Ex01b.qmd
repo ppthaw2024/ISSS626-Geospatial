@@ -83,6 +83,11 @@ mpsz <- mpsz %>%
 mpsz
 ```
 
+```{r}
+
+write_rds(mpsz, "Data/rds/mpsz_sf.rds")
+```
+
 ### **2.3.3 Importing Attribute Data into R**
 
 ```{r}
