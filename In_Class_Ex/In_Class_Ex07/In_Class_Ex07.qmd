@@ -745,75 +745,7 @@ tmap_mode("plot")
 
 **In Class Exercise : Thematic Map (Select 1 planning area, describe R2 distribution in that area)**
 
-```{area_name <- "ANG MO KIO"}
 
-pa_candidates <- c("PLN_AREA_N", "PLN_AREA", "PA_NAME")
-pa_col <- intersect(pa_candidates, names(mpsz_svy21))[1]
-stopifnot(length(pa_col) == 1)
-
-#  Filter the planning area polygon (case-insensitive match)
-mpsz_one_pa <- mpsz_svy21 %>% 
-  filter(tolower(.data[[pa_col]]) == tolower(area_name)) %>% 
-  st_make_valid()
-
-if (nrow(mpsz_one_pa) == 0) {
-  stop(sprintf("Planning area '%s' not found. Check the spelling or run names(mpsz_svy21).", area_name))
-}
-
-# Clip GWR points to the selected planning area
-
-pa_points <- st_intersection(
-  condo_resale.sf.adaptive %>% select(Local_R2),
-  st_make_valid(mpsz_one_pa)
-)
-
-# Optional: remove any NA R2
-pa_points <- pa_points %>% filter(!is.na(Local_R2))
-
-# 
-r2_stats <- pa_points %>% 
-  st_drop_geometry() %>%
-  summarise(
-    n        = dplyr::n(),
-    mean     = mean(Local_R2),
-    median   = median(Local_R2),
-    sd       = sd(Local_R2),
-    min      = min(Local_R2),
-    p25      = quantile(Local_R2, 0.25),
-    p75      = quantile(Local_R2, 0.75),
-    max      = max(Local_R2)
-  )
-print(r2_stats)
-
-#  Thematic map (points colored by Local_R2) over the chosen planning area
-tmap_mode("plot")
-
-tm_shape(mpsz_one_pa) +
-  tm_polygons(col = "grey95", border.col = "grey60") +
-tm_shape(pa_points) +
-  tm_dots(
-    col = "Local_R2",
-    palette = "YlGnBu",          # change palette if you like
-    style = "quantile",          # ensures balanced bins for local description
-    n = 5,
-    size = 0.06,
-    border.col = "grey30",
-    border.lwd = 0.3,
-    legend.col.show = TRUE,
-    title = "Local R²"
-  ) +
-  tm_layout(
-    title = sprintf("Local R² Distribution in %s", area_name),
-    frame = FALSE,
-    legend.outside = TRUE,
-    legend.outside.position = "right",
-    asp = 0
-  )
-
-```
-
-```{}
-```
 
 ```{r}
 ## Analyzing R² Distribution in Ang Mo Kio Planning Area
@@ -918,10 +850,8 @@ comparison <- data.frame(
   Median_R2 = c(amk_r2_stats$median_r2, overall_r2_stats$median_r2),
   SD_R2     = c(amk_r2_stats$sd_r2,     overall_r2_stats$sd_r2)
 )
-comparison
+
 
 ```
 
-```{r}
 
-```
