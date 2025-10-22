@@ -22,10 +22,10 @@ The analysis is structured in three sections:
 **1. Foundational Analysis**\
 Passenger trips are aggregated into a **hexagonal Traffic Analysis Zone (TAZ)** framework to build a clear spatial representation of mobility intensity during weekday morning, weekday evening, and weekend periods. This foundational layer visualises baseline travel flows and spatial distribution patterns across the island.
 
-**2. Spatial Clustering** \
+**2. Spatial Clustering**\
 To detect localised patterns of demand, the study applies **Local Measures of Spatial Autocorrelation (LMSA)** — including *Local Moran’s I*, *Geary’s C*, and *Getis-Ord Gi\** — to identify statistically significant **hotspots**, **coldspots**, and **outlier areas** of bus ridership.
 
-**3. Temporal Trend Analysis** \
+**3. Temporal Trend Analysis**\
 To examine how these clusters evolve, **Emerging Hot Spot Analysis (EHSA)** integrates the Gi\* statistic with the **Mann-Kendall trend test**, classifying clusters as **emerging**, **intensifying**, **diminishing**, or **sporadic** over time. This captures the dynamic dimension of urban mobility.
 
 ### 1.1 Datasets
@@ -46,19 +46,32 @@ To examine how these clusters evolve, **Emerging Hot Spot Analysis (EHSA)** inte
 
 The following R packages are used:
 
--   `spdep`: compute spatial weights and global and local spatial autocorrelation statistics
+-   
+
+    | R Package | Description |
+    |------------------------------------|------------------------------------|
+    | **sf** | A package that provides [**simple features access**](https://en.wikipedia.org/wiki/Simple_Features) for R. |
+    | **spdep** | Creates spatial weights matrices and to test for and model spatial autocorrelation in geographical data, like Moran’s I and Geary’s C and Local Moran’s I and Getis-Ord G. |
+    | **tidyverse** | Includes the core packages like ggplot2, dplyr, readr, purrr, tibble, lubridate, etc. |
+    | **sfdep** | Builds on the great shoulders of **spdep** package for spatial dependence. sfdep creates an sf and tidyverse friendly interface to the package as well as introduces new functionality that is not present in spdep. |
+    | **knitr** | Color maps designed to improve graph readability for readers with common forms of color blindness and/or color vision deficiency. |
+    | **tmap** | geographical maps in which spatial data distributions are visualized. This package offers a flexible, layer-based, and easy to use approach to create thematic maps, such as choropleths and bubble maps. |
+    | **rvest** | Provides the HTML parsing and extraction functions |
+    | **patchwork** |  |
 
 ```{r}
-pacman::p_load(tidyverse, sf, spdep, tmap, knitr, httr, rvest)
+
+pacman::p_load(tidyverse, sf, spdep, sfdep, knitr,tmap, rvest, patchwork)
 ```
 
 ### 2.2 Importing Data
 
 #### 2.2.1 Bus Stop Location
 
-As Bus Stop location data has crs = 9001, we standardise it into crs = 3414.
+We need to transform the data for EPSG:3414 Projected coordinate system for Singapore as bus Stop location data has crs = 9001,
 
 ```{r}
+
 BusStop = st_read(dsn = "data/LTADataMall/",
                   layer = "BusStop") %>%
   st_transform(crs = 3414)
@@ -123,18 +136,22 @@ odbus <- read_csv("data/LTADataMall/origin_destination_bus_202508.csv")
 
 ##### 2.2.3.1 Visualise the Bus Stops
 
-We see some bus stops outside the polygons. (Due to the JB border)
-
 ```{r}
-tm_shape(mpsz_cl) + 
-  tm_polygons() + 
-  tm_shape(BusStop) + 
-  tm_dots()
+
+#| fig-width: 12
+#| fig-height: 8
+
+tm_shape(mpsz_cl) +
+  tm_polygons() +
+  tm_shape(BusStop) +
+  tm_dots(size = 0.15, fill = "black", col = "grey") +
+  tm_layout(bg.color = "lightblue",
+            outer.margins = c(0.01, 0.01, 0.01, 0.01))
 ```
 
 ##### 2.2.3.2 Extract Bus Stops within Singapore
 
-We do not use left join as we only want to get bus stops within mpsz.
+Some bus stops are outside the polygons because of JB border and they have to be excluded**.** One way to exclude them is to plot the mpsz layer on top of the BusStop layer.
 
 ```{r}
 BusStop_in_SG <- st_join(
@@ -146,10 +163,16 @@ BusStop_in_SG <- st_join(
 Plot the bus stop data again to check that the bus stops have been removed.
 
 ```{r}
-tm_shape(mpsz_cl) + 
-  tm_polygons() + 
-  tm_shape(BusStop_in_SG) + 
-  tm_dots()
+#| fig-width: 12
+#| fig-height: 8
+
+tm_shape(mpsz_cl) +
+  tm_polygons() +
+  tm_shape(BusStop_in_SG) +
+  tm_dots(size = 0.2, fill = "black", col = "grey") +
+  tm_layout(main.title = "Bus Stops Within Singapore Boundaries",
+            bg.color = "lightblue",
+            outer.margins = c(0.01, 0.01, 0.01, 0.01))
 ```
 
 ##### 2.2.3.3 Deriving Analytical Hexagon
@@ -164,7 +187,7 @@ hexagon <- st_make_grid(mpsz_cl,
 
 ##### 2.2.3.4 Filtering hexagons with bus stops
 
-`n_collisions` counts the number of bus stops in each hexagon. Only retain hexagons with bus stops.
+To retain hexagons with bus stops. Use `st_intersects()` to return 2 values: True, False (0 or 1). The hexagon with a bus stop would be 1, and without a bus stop would return 0.
 
 ```{r}
 hexagon$n_collisions =
@@ -174,9 +197,23 @@ hexagon$n_collisions =
 hexagon <- filter(hexagon, n_collisions > 0)
 ```
 
-##### 2.2.3.5 Assigning ids to each hexagon
+```{r}
+#| fig-width: 12
+#| fig-height: 8
+tm_shape(mpsz_cl) +
+  tm_polygons() +
+  tm_shape(hexagon) +
+  tm_fill(col = "grey20", fill = "orange", fill_alpha = 0.7) +
+  tm_layout(bg.color = "lightblue",
+            outer.margins = c(0.01, 0.01, 0.01, 0.01))
+```
 
-Create id for each hexagon as previous hexagon table has no id.
+The hexagon map shows where bus stops are found across Singapore. Each colored hexagon marks an area with at least one bus stop, making it easy to see that most bus stops are located in built-up towns and along main roads. Many other parts of Singapore, especially less developed areas, don’t have direct bus service. This map gives us a clear base to group and analyze passenger numbers later. Since the hexagons don’t have names or numbers, we’ll give each one an **ID** so we can keep track of them more easily.
+
+##### 2.2.3.5 Assigning ID to each hexagon
+
+In order to know the trips occurred in each hexagon in certain time periods, we need to give each hexagon an ID.
+
 
 ```{r}
 hexagon <- hexagon %>%
@@ -195,7 +232,7 @@ We are only interested in ORIGIN_PT_CODE (trip origin).
 
 ##### 2.2.4.1 Cleaning the data
 
-Unnecessary columns are removed
+Only necessary columns are selected.
 
 ```{r}
 trips <- odbus %>%
@@ -222,6 +259,16 @@ kable(head(bs_hex))
 ```{r}
 trips <- inner_join(trips, bs_hex)
 kable(head(trips))
+```
+
+```{r}
+trips_sort <- trips %>%
+  arrange(desc(TRIPS)) %>%
+  mutate(HEX_ID = factor(HEX_ID, levels = unique(HEX_ID)))
+```
+
+```{r}
+glimpse(trips_sort)
 ```
 
 #### 2.2.5 Create Total Trips per Hexagon dataset
