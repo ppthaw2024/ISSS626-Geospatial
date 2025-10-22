@@ -1,0 +1,283 @@
+---
+title: "Take_Home Ex02: Singapore Bus Mobility and Urban Development Patterns"
+author: "Pwint Phoo Thaw"
+date: "October 23, 2025"
+date-modified: "October 23, 2025"
+number-sections: true
+execute: 
+  eval: true
+  echo: true
+  warning: false
+  freeze: true
+---
+
+![](images/SG%20Bus%20&%20MBS.jpg)
+
+## 1. Overview
+
+Buses serve as a vital component of Singapore’s public transport network, connecting residential neighbourhoods, business hubs, and peripheral regions. To support the nation’s long-term mobility planning, this project conducts a comprehensive spatio-temporal analysis of commuter behaviour, moving beyond traditional mapping toward data-driven transport planning. By leveraging large-scale bus tap-on data, the study examines not only the intensity and distribution of passenger flows but also their spatial clustering and temporal dynamics.
+
+The analysis is structured in three sections:
+
+**1. Foundational Analysis**\
+Passenger trips are aggregated into a **hexagonal Traffic Analysis Zone (TAZ)** framework to build a clear spatial representation of mobility intensity during weekday morning, weekday evening, and weekend periods. This foundational layer visualises baseline travel flows and spatial distribution patterns across the island.
+
+**2. Spatial Clustering** \
+To detect localised patterns of demand, the study applies **Local Measures of Spatial Autocorrelation (LMSA)** — including *Local Moran’s I*, *Geary’s C*, and *Getis-Ord Gi\** — to identify statistically significant **hotspots**, **coldspots**, and **outlier areas** of bus ridership.
+
+**3. Temporal Trend Analysis** \
+To examine how these clusters evolve, **Emerging Hot Spot Analysis (EHSA)** integrates the Gi\* statistic with the **Mann-Kendall trend test**, classifying clusters as **emerging**, **intensifying**, **diminishing**, or **sporadic** over time. This captures the dynamic dimension of urban mobility.
+
+### 1.1 Datasets
+
+**Aspatial Data**
+
+-   *Passenger Volume by Origin Destination Bus Stops* from [LTA DataMall](https://datamall.lta.gov.sg/content/datamall/en.html)
+
+**Geospatial Data**
+
+-   *Bus Stop Location* from LTA DataMall. It provides information about all the bus stops currently being serviced by buses, including the bus stop code (identifier) and location coordinates.
+
+-   *Master Plan 2019 Subzone Boundary (No Sea)* from [Singapore’s open data portal](https://data.gov.sg/).
+
+## 2. Data Preparation
+
+### 2.1 Loading the R packages
+
+The following R packages are used:
+
+-   `spdep`: compute spatial weights and global and local spatial autocorrelation statistics
+
+```{r}
+pacman::p_load(tidyverse, sf, spdep, tmap, knitr, httr, rvest)
+```
+
+### 2.2 Importing Data
+
+#### 2.2.1 Bus Stop Location
+
+As Bus Stop location data has crs = 9001, we standardise it into crs = 3414.
+
+```{r}
+BusStop = st_read(dsn = "data/LTADataMall/",
+                  layer = "BusStop") %>%
+  st_transform(crs = 3414)
+```
+
+#### 2.2.2 Master Plan 2019 Subzone
+
+```{r}
+mpsz_sf <- st_read("data/geospatial/MasterPlan2019SubzoneBoundaryNoSeaKML.kml") %>%
+  st_zm(drop = TRUE, what = "ZM") %>% st_transform(crs = 3414)
+```
+
+```{r}
+plot(mpsz_sf)
+```
+
+```{r}
+extract_kml_field <- function(html_text, field_name) {
+  if (is.na(html_text) || html_text == "") return(NA_character_)
+  
+  page <- read_html(html_text)
+  rows <- page %>% html_elements("tr")
+  
+  value <- rows %>%
+    keep(~ html_text2(html_element(.x, "th")) == field_name) %>%
+    html_element("td") %>%
+    html_text2()
+  
+  if (length(value) == 0) NA_character_ else value
+}
+```
+
+```{r}
+mpsz_sf <- mpsz_sf %>%
+  mutate(
+    REGION_N = map_chr(Description, extract_kml_field, "REGION_N"),
+    PLN_AREA_N = map_chr(Description, extract_kml_field, "PLN_AREA_N"),
+    SUBZONE_N = map_chr(Description, extract_kml_field, "SUBZONE_N"),
+    SUBZONE_C = map_chr(Description, extract_kml_field, "SUBZONE_C")
+  ) %>%
+  select(-Name, -Description) %>%
+  relocate(geometry, .after = last_col())
+```
+
+```{r}
+mpsz_cl <- mpsz_sf %>%
+  filter(SUBZONE_N != "SOUTHERN GROUP",
+         PLN_AREA_N != "WESTERN ISLANDS", 
+         PLN_AREA_N != "NORTH-EASTERN ISLANDS")
+```
+
+```{r}
+write_rds(mpsz_cl, 
+          "data/rds/mpsz_cl.rds")
+```
+
+#### 2.2.3 O-D Bus Trips
+
+```{r}
+odbus <- read_csv("data/LTADataMall/origin_destination_bus_202508.csv")
+```
+
+##### 2.2.3.1 Visualise the Bus Stops
+
+We see some bus stops outside the polygons. (Due to the JB border)
+
+```{r}
+tm_shape(mpsz_cl) + 
+  tm_polygons() + 
+  tm_shape(BusStop) + 
+  tm_dots()
+```
+
+##### 2.2.3.2 Extract Bus Stops within Singapore
+
+We do not use left join as we only want to get bus stops within mpsz.
+
+```{r}
+BusStop_in_SG <- st_join(
+  BusStop, mpsz_cl,
+  join = st_within,
+  left = FALSE)
+```
+
+Plot the bus stop data again to check that the bus stops have been removed.
+
+```{r}
+tm_shape(mpsz_cl) + 
+  tm_polygons() + 
+  tm_shape(BusStop_in_SG) + 
+  tm_dots()
+```
+
+##### 2.2.3.3 Deriving Analytical Hexagon
+
+```{r}
+hexagon <- st_make_grid(mpsz_cl,
+                        cellsize = 750,
+                        what = "polygon",
+                        square = FALSE) %>%
+  st_sf()
+```
+
+##### 2.2.3.4 Filtering hexagons with bus stops
+
+`n_collisions` counts the number of bus stops in each hexagon. Only retain hexagons with bus stops.
+
+```{r}
+hexagon$n_collisions =
+  lengths(st_intersects(
+    hexagon, BusStop_in_SG))
+
+hexagon <- filter(hexagon, n_collisions > 0)
+```
+
+##### 2.2.3.5 Assigning ids to each hexagon
+
+Create id for each hexagon as previous hexagon table has no id.
+
+```{r}
+hexagon <- hexagon %>%
+  select(,-n_collisions)
+
+hexagon$HEX_ID <- sprintf(
+  "H%04d", seq_len(nrow(hexagon))) %>%
+  as.factor()
+
+kable(head(hexagon))
+```
+
+#### 2.2.4 Preparing Trip Generation Data
+
+We are only interested in ORIGIN_PT_CODE (trip origin).
+
+##### 2.2.4.1 Cleaning the data
+
+Unnecessary columns are removed
+
+```{r}
+trips <- odbus %>%
+  select(c(ORIGIN_PT_CODE, DAY_TYPE, TIME_PER_HOUR, TOTAL_TRIPS)) %>%
+  rename(BUS_STOP_N = ORIGIN_PT_CODE) %>%
+  rename(HOUR_OF_DAY = TIME_PER_HOUR) %>%
+  rename(TRIPS = TOTAL_TRIPS)
+trips$BUS_STOP_N <- as.factor(trips$BUS_STOP_N)
+kable(head(trips))
+```
+
+##### 2.2.4.2 Combining bus stop and hexagon layers
+
+```{r}
+bs_hex <-st_intersection(
+  BusStop, hexagon) %>%
+  st_drop_geometry() %>%
+  select(c(BUS_STOP_N, HEX_ID))
+kable(head(bs_hex))
+```
+
+##### 2.2.4.3 Adding Hex_ID into bus trips data
+
+```{r}
+trips <- inner_join(trips, bs_hex)
+kable(head(trips))
+```
+
+#### 2.2.5 Create Total Trips per Hexagon dataset
+
+In this section, we will join *hexagon* spatial data and *trips* aspatial data for Local Measures of Spatial Association (LMSA) analysis. This is to allow us to view the spatial distribution of total bus trips.
+
+##### 2.2.5.1 Aggregate Trip Data by Hexagon
+
+Within *trips* dataset, we calculate the total TRIPS per hexagon ("HEX_ID").
+
+```{r}
+trips_agg <- trips %>%
+  group_by(HEX_ID) %>%
+  summarise(total_trips = sum(TRIPS, na.rm = TRUE),
+            .groups = 'drop')
+
+kable(head(trips_agg))
+```
+
+##### 2.2.5.2 Relational Join
+
+Join *trips_agg* with *hexagon* on "HEX_ID".
+
+```{r}
+hexagon_trips <- hexagon %>%
+  inner_join(trips_agg, by = "HEX_ID") %>%
+  mutate(total_trips = replace_na(total_trips, 0))
+
+kable(head(hexagon_trips))
+```
+
+#### 2.2.5 Create Total Trips per Hexagon dataset
+
+This section prepares the data for **Emerging Hot Spot Analysis (EHSA)**. We perform a spatial join to link the `hexagon` grid geometries with the aggregated bus trips data. By preserving the `HOUR_OF_DAY` dimension, we successfully build the spatio-temporal dataset required for constructing the space-time cube.
+
+##### 2.2.5.1 Aggregate Trip Data by Hexagon
+
+Within *trips* dataset, we calculate the total TRIPS per hexagon ("HEX_ID").
+
+```{r}
+trips_agg <- trips %>%
+  group_by(HEX_ID) %>%
+  summarise(total_trips = sum(TRIPS, na.rm = TRUE),
+            .groups = 'drop')
+
+kable(head(trips_agg))
+```
+
+##### 2.2.5.2 Relational Join
+
+Join *trips_agg* with *hexagon* on "HEX_ID".
+
+```{r}
+hexagon_trips <- hexagon %>%
+  inner_join(trips_agg, by = "HEX_ID") %>%
+  mutate(total_trips = replace_na(total_trips, 0))
+
+kable(head(hexagon_trips))
+```
