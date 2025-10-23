@@ -128,7 +128,77 @@ write_rds(mpsz_cl,
           "data/rds/mpsz_cl.rds")
 ```
 
-#### 2.2.3 O-D Bus Trips
+#### **2.2.2.1MRT Station**
+
+Below we will import **Master Plan 2019 Subzone Boundary (No Sea).**
+
+```{r}
+mrt <- st_read("data/LTADataMall/LTAMRTStationExitKML.kml") %>%
+  st_zm(drop = TRUE, what = "ZM") %>%
+  st_transform(crs = 3414)
+```
+
+Below code is to write MRT station data into a rsd file, so we can directly call it without processing the data set again.
+
+```{r}
+#| eval: false
+extract_kml_field <- function(html_text, field_name) {
+  if (is.na(html_text) || html_text == "") return(NA_character_)
+  
+  page <- read_html(html_text)
+  rows <- page %>% html_elements("tr")
+  
+  value <- rows %>%
+    keep(~ html_text2(html_element(.x, "th")) == field_name) %>%
+    html_element("td") %>%
+    html_text2()
+  
+  if (length(value) == 0) NA_character_ else value
+}
+
+mrt_sf <- mrt %>%
+  mutate(
+    STATION = map_chr(Description, extract_kml_field, "STATION_NA"),
+    EXIT_CODE = map_chr(Description, extract_kml_field, "EXIT_CODE"),
+    INC_CRC = map_chr(Description, extract_kml_field, "INC_CRC"),
+    FMEL_UPD_D = map_chr(Description, extract_kml_field, "FMEL_UPD_D")
+  ) %>%
+  
+  # Just one exit for each station to avoid multiple points.
+  filter(EXIT_CODE == "Exit A") %>%
+  
+  select(-Name, -Description) %>%
+  relocate(geometry, .after = last_col())
+
+
+write_rds(mrt_sf, "data/rds/mrt_sf.rds")
+```
+
+```{r}
+mrt_sf <- read_rds("data//rds/mrt_sf.rds")
+```
+
+Plot the MRT station exits in a tmap.
+
+```{r}
+tmap_mode("view")
+tm_shape(mpsz_cl) +
+  tm_polygons(fill = "#A1C2BD", filll_alpha = 0.3) +
+  tm_text("SUBZONE_N", size = 0.4) +
+tm_shape(mrt_sf) +
+  tm_symbols(
+   fill = "#EDA35A", size = 0.4,
+   col = "#D9E9CF",
+#   popup = "STATION"
+  ) +
+  tm_layout(
+    main.title = "MRT Station Exits",
+    legend.show = FALSE    # Hide the legend since there are many unique stations
+  )
+
+```
+
+#### 2.2.3 Origin Destination Bus Trips
 
 ```{r}
 odbus <- read_csv("data/LTADataMall/origin_destination_bus_202508.csv")
@@ -555,7 +625,444 @@ combined_plot
 
 The chart shows the distribution of passenger trip volumes during three time periods in Singapore: weekday morning (6–9 AM), weekday evening (5–8 PM), and weekends/holidays (11 AM–8 PM). In all three periods, the curve rises steeply at the beginning and then levels off, indicating that a small number of zones account for a large share of total trips, while the majority of zones have relatively low passenger volumes. The evening period has the steepest curve, showing the highest concentration of trips in fewer zones, followed by the morning period. The weekend curve is slightly less steep, indicating a wider spread of passenger trips across zones compared to weekdays. Overall, trip volumes are not evenly distributed, with clear differences between weekday peaks and weekends.
 
-## 4. Spatial Clustering
+## 4. Spatial Autocorrelation Analysis
+
+### 4.1 Global Measures of Spatial Autocorrelation
+
+```{r}
+#| code-fold: true
+# AM weekdays sorted by Hex ID
+AM_weekday <- trips %>%
+  filter(HOUR_OF_DAY %in% c(6, 7, 8, 9),
+         DAY_TYPE == "WEEKDAY") %>%
+  group_by(HEX_ID) %>%
+  summarise(AM_TRIPS = sum(TRIPS)) %>%
+  arrange(as.character(HEX_ID))
+
+# PM weekdays sorted by Hex ID
+PM_weekday <- trips %>%
+  filter(HOUR_OF_DAY %in% c(17, 18, 19, 20),
+         DAY_TYPE == "WEEKDAY") %>%
+  group_by(HEX_ID) %>%
+  summarise(PM_TRIPS = sum(TRIPS)) %>%
+  arrange(as.character(HEX_ID))
+
+# Weekend sorted by Hex ID
+weekend <- trips %>%
+  filter(HOUR_OF_DAY %in% c(11:20),
+         DAY_TYPE == "WEEKENDS/HOLIDAY") %>%
+  group_by(HEX_ID) %>%
+  summarise(WKD_TRIPS = sum(TRIPS)) %>%
+  arrange(as.character(HEX_ID))
+```
+
+```{r}
+# Join all three datasets
+hexagon_all <- hexagon %>%
+  left_join(AM_weekday, by = "HEX_ID") %>%
+  left_join(PM_weekday, by = "HEX_ID") %>%
+  left_join(weekend, by = "HEX_ID") %>%
+  mutate(across(c(AM_TRIPS, PM_TRIPS, WKD_TRIPS), 
+                ~replace_na(., 0))) # Handle any NA values - we fill in zero for hexagons with no trips
+
+# Check if join worked
+names(hexagon_all)  
+head(hexagon_all$PM_TRIPS)  
+head(hexagon_all$AM_TRIPS)  
+head(hexagon_all$WKD_TRIPS)  
+```
+
+::: panel-tabset
+## AM weekdays
+
+```{r}
+#| fig-width: 12
+#| align: center
+#| code-fold: true
+
+#tmap_mode("view")
+am_tm <- tm_shape(mpsz_cl) +
+  tm_polygons(fill = "#FFF4EA", alpha = 0.3) +
+  tm_text("SUBZONE_N", size = 0.5) +
+tm_shape(hexagon_all) +
+  tm_fill("AM_TRIPS", palette = "-Spectral", fill_alpha = 0.5) +
+  tm_borders(col = "#B3C8CF", lwd = 0.1) +
+  tm_layout(bg.color = "#D0DDD0",
+            outer.margins = c(0.01, 0.01, 0.01, 0.01),
+            main.title = "AM Peak Hour Trips by Hexagon",
+            legend.position = c("right", "bottom"),
+            frame = FALSE) +
+    tm_view(set_zoom_limits = c(11,18))
+
+# Add sqr-transformed column (not using)
+hexagon_all <- hexagon_all %>%
+  mutate(AM_TRIPS_SQRT = sqrt(AM_TRIPS))
+
+#tmap_mode("view")
+am_tm_qt <- tm_shape(mpsz_cl) +
+  tm_polygons(fill = "#FFF4EA", fill_alpha = 0.3) +
+  tm_text("SUBZONE_N", size = 0.5) +
+  tm_shape(hexagon_all) +
+  tm_fill("AM_TRIPS", palette = "-Spectral", fill_alpha = 0.6,
+          style = "quantile") +
+  tm_borders(col = "#B3C8CF", lwd = 0.1) +
+  tm_layout(bg.color = "#D0DDD0",
+            outer.margins = c(0.01, 0.01, 0.01, 0.01),
+            main.title = "AM Peak Hour Trips (Quantile)",
+            legend.position = c("right", "bottom"),
+            frame = FALSE) +
+  tm_shape(mrt_sf) +
+  tm_symbols(   fill = "#CA8787", size = 0.5, col = "#D9E9CF"
+  ) +
+  tm_view(set_zoom_limits = c(11,18)) 
+
+tmap_arrange(am_tm, am_tm_qt, 
+             asp=1, ncol=1,
+             sync = TRUE)
+tmap_mode("plot")
+```
+
+## PM weekdays
+
+```{r}
+#| fig-width: 12
+#| fig-height: 7
+#| align: center
+#| code-fold: true
+
+#tmap_mode("view")
+pm_tm <- tm_shape(mpsz_cl) +
+  tm_polygons(fill = "#FFF4EA", alpha = 0.3) +
+  tm_text("SUBZONE_N", size = 0.5) +
+tm_shape(hexagon_all) +
+  tm_fill("PM_TRIPS", palette = "-Spectral", fill_alpha = 0.5) +
+  tm_borders(col = "#B3C8CF", lwd = 0.1) +
+  tm_layout(bg.color = "#D0DDD0",
+            outer.margins = c(0.01, 0.01, 0.01, 0.01),
+            main.title = "PM Peak Hour Trips by Hexagon",
+            legend.position = c("right", "bottom"),
+            frame = FALSE) +
+  tm_view(set_zoom_limits = c(11,18))
+
+# Add sqr-transformed column
+hexagon_all <- hexagon_all %>%
+  mutate(PM_TRIPS_SQRT = sqrt(PM_TRIPS))
+
+#tmap_mode("view")
+
+pm_tm_qt <- tm_shape(mpsz_cl) +
+  tm_polygons(fill = "#FFF4EA", alpha = 0.3) +
+  tm_text("SUBZONE_N", size = 0.5) +
+  tm_shape(hexagon_all) +
+  tm_fill("PM_TRIPS", palette = "-Spectral", fill_alpha = 0.6,
+          style = "quantile"
+          ) +
+  tm_borders(col = "#B3C8CF", lwd = 0.1) +
+  tm_layout(bg.color = "#D0DDD0",
+            outer.margins = c(0.01, 0.01, 0.01, 0.01),
+            main.title = "PM Peak Hour Trips (Quantile)",
+            legend.position = c("right", "bottom"),
+            frame = FALSE) +
+  tm_shape(mrt_sf) +
+  tm_symbols(fill = "#CA8787", size = 0.5, col = "#D9E9CF") +
+  tm_view(set_zoom_limits = c(11,18))
+
+tmap_arrange(pm_tm, pm_tm_qt, 
+             asp=1, ncol=1,
+             sync = TRUE)
+
+tmap_mode("plot")
+```
+
+## Weekends
+
+```{r}
+#| fig-width: 12
+#| fig-height: 7
+#| align: center
+#| code-fold: true
+
+#tmap_mode("view")
+wkd_tm <- tm_shape(mpsz_cl) +
+  tm_polygons(fill = "#A1C2BD", alpha = 0.3) +
+  tm_text("SUBZONE_N", size = 0.5) +
+tm_shape(hexagon_all) +
+  tm_fill("WKD_TRIPS", palette = "-Spectral", fill_alpha = 0.5) +
+  tm_borders(col = "#B3C8CF", lwd = 0.1) +
+  tm_layout(bg.color = "#D0DDD0",
+            outer.margins = c(0.01, 0.01, 0.01, 0.01),
+            main.title = "Weekend Peak Hour Trips by Hexagon",
+            legend.position = c("right", "bottom"),
+            frame = FALSE) +
+    tm_view(set_zoom_limits = c(11,18))
+
+# Add sqr-transformed column
+hexagon_all <- hexagon_all %>%
+  mutate(WKD_TRIPS_SQRT = sqrt(WKD_TRIPS))
+
+#tmap_mode("view")
+wkd_tm_qt <- tm_shape(mpsz_cl) +
+  tm_polygons(fill = "#A1C2BD", alpha = 0.3) +
+  tm_text("SUBZONE_N", size = 0.5) +
+  tm_shape(hexagon_all) +
+  tm_fill("WKD_TRIPS", palette = "-Spectral", fill_alpha = 0.6,
+          style = "quantile") +
+  tm_borders(col = "#B3C8CF", lwd = 0.1) +
+  tm_layout(bg.color = "#D0DDD0",
+            outer.margins = c(0.01, 0.01, 0.01, 0.01),
+            main.title = "Weekend Peak Hour Trips (Quantile)",
+            legend.position = c("right", "bottom"),
+            frame = FALSE) +
+  tm_shape(mrt_sf) +
+  tm_symbols(fill = "#CA8787", size = 0.5, col = "#D9E9CF"
+  ) +
+  tm_view(set_zoom_limits = c(11,18))
+
+tmap_arrange(wkd_tm, wkd_tm_qt, 
+             asp=1, ncol=1,
+             sync = TRUE)
+tmap_mode("plot")
+```
+:::
+
+This is for preparing the passenger trips data per hexagon area in `hexagon_all`.
+
+#### **4.1.1 Compute (QUEEN) contiguity spatial weights**
+
+This study examines whether passenger trips are evenly spread across all hexagons. Earlier charts already suggest that trips are unevenly distributed, and this section aims to confirm that using statistical evidence. Once unevenness is established, the next step is to determine whether there are specific clusters of high or low activity. If such clusters are found, the final step is to identify their exact locations.
+
+```{r}
+wm_q <- poly2nb(hexagon_all, queen = TRUE)
+summary(wm_q)
+```
+
+The summary report above shows that there are 826 regions (hexagons) in the Singapore. The most connected area unit has 6 neighbours. 1 region has 0 neighbours (completely isolated).
+
+The neighbour structure forms 6 separate connected subgraphs, meaning the entire study area is not fully connected. This can occur when some hexagons are isolated (e.g., near borders or water bodies).
+
+```{r}
+longitude <- map_dbl(hexagon_all$geometry, ~st_centroid(.x)[[1]])
+```
+
+```{r}
+latitude <- map_dbl(hexagon_all$geometry, ~st_centroid(.x)[[2]])
+```
+
+```{r}
+coords <- cbind(longitude, latitude)
+head(coords)
+```
+
+```{r}
+plot(hexagon_all$geometry, border="lightgrey")
+plot(wm_q, coords, pch = 19, cex = 0.6, add = TRUE, col= "red")
+```
+
+#### **4.1.2 Row-standardised weights matrix**
+
+Now we want to assign weights t =o each neighboring hexagon. In this study, each hexagon will be assigned equal weight (stylep = W).
+
+```{r}
+rswm_q <- nb2listw(wm_q,
+                   style = "W", zero.policy = TRUE)
+rswm_q
+```
+
+#### **4.1.3 Moran's I Test**
+
+Moran's I statistics testing is being performed for the 3 different periods of time by using `moran.test()` from spdep package.
+
+::: panel-tabset
+## Weekday AM
+
+**Moran's I Test**
+
+```{r}
+moran.test(hexagon_all$AM_TRIPS,
+           listw = rswm_q,
+           zero.policy = TRUE, na.action = na.omit)
+```
+
+**Insight**:
+
+The Moran’s I statistic for weekday morning bus trips is 0.34, with an expected value near zero (–0.0012) and a p-value \< 2.2 × 10⁻¹⁶. This indicates that the observed value is much higher than expected under randomness. The large standard deviate (14.513) also supports this.
+
+This means there is strong and statistically significant positive spatial autocorrelation in weekday morning passenger trips. In simpler terms, areas with high passenger volumes are located close to other areas with high volumes, and areas with low passenger volumes tend to cluster together as well.
+
+This confirms that bus trip activity during morning peak hours is not randomly distributed across space but shows clear spatial clustering.
+
+**Monte Carlo Moran's I** :simulation for 1,000 times.
+
+```{r}
+set.seed(1234)
+bperm = moran.mc(hexagon_all$AM_TRIPS,
+                 listw = rswm_q,
+                 nsim = 999,
+                 zero.policy = TRUE, na.action = na.omit)
+bperm
+```
+
+The Monte Carlo simulation was run 1,000 times (999 simulations + 1 observed) to test the significance of the Moran’s I statistic more robustly. The observed Moran’s I is 0.34, which ranked 1,000 out of 1,000, meaning none of the simulated random distributions produced a value higher than the observed one.
+
+The p-value of 0.001 indicates that the probability of observing such a strong Moran’s I by random chance is very low (0.1%). This provides strong statistical evidence that the spatial clustering pattern detected earlier is not due to random variation, but reflects a real spatial structure in the weekday morning bus trip data.
+
+**Visualise Moran's I Test**
+
+We plot the distribution of statistical values below.
+
+```{r}
+mean <- mean(bperm$res[1:999])
+print(paste0("Mean of permutations: ", mean))
+
+var <- var(bperm$res[1:999])
+print(paste0("Variance: ", var))
+
+summary(bperm$res[1:999])
+```
+
+```{r}
+perm_data <- data.frame(moran_i = bperm$res)
+
+ggplot(perm_data, aes(x = moran_i)) +
+  geom_histogram(bins = 20, fill = "lightblue", color = "#DCDCDC") +
+  geom_vline(xintercept = 0, color = "blue", linewidth = 0.5) +
+  geom_vline(xintercept = 0.34, color = "red", linewidth = 0.5) +
+  labs(x = "Simulated Moran's I (Weekday AM)", y = "Frequency") +
+  theme(plot.background = element_rect("#D0DDD0"),
+        panel.background = element_rect(fill = "#D0DDD0"))
+```
+
+The red line on the far right indicates the actual observed Moran’s I for weekday morning bus trips (≈ 0.34). This observed value lies far outside the bulk of the simulated distribution, showing that the observed spatial pattern is much stronger than what would occur by chance.
+
+This visual evidence supports the earlier **Moran’s I test** and **Monte Carlo p-value**, confirming the presence of **significant positive spatial autocorrelation** in passenger trip volumes during the morning peak period.
+
+## Weekday PM
+
+**Moran's I Test**
+
+```{r}
+moran.test(hexagon_all$PM_TRIPS,
+           listw = rswm_q,
+           zero.policy = TRUE, na.action = na.omit)
+```
+
+**Insight**
+
+For weekday evening trips, the Moran’s I statistic is 0.108, with an expected value close to zero (–0.0012). The p-value is 9.748 × 10⁻⁷, which is far below 0.05, indicating statistical significance. The standard deviate is 4.7586, confirming that the observed value is much higher than what would be expected by random chance.
+
+Although the Moran’s I value for PM trips is **positive and significant**, it is **lower than the AM value (0.34)**, meaning that **spatial clustering is present but weaker** in the evening compared to the morning. Passenger trips during weekday evenings are still not randomly distributed, but the spatial pattern is **less tightly clustered**.
+
+One likely reason for this weaker clustering is the greater variety in trip origins during the evening. Unlike the morning, when most trips are concentrated in residential areas heading toward key destinations, evening trips tend to start from a wider mix of locations — such as workplaces, schools, commercial districts, and shopping areas — resulting in a more scattered spatial pattern.
+
+**Monte Carlo Moran's I**
+
+```{r}
+set.seed(1234)
+bperm_pm = moran.mc(hexagon_all$PM_TRIPS,
+                 listw = rswm_q,
+                 nsim = 999,
+                 zero.policy = TRUE, na.action = na.omit)
+bperm_pm
+```
+
+The p-value of 0.001 provides strong evidence to reject the null hypothesis, confirming that **weekday PM passenger trips exhibit significant spatial clustering.** This Monte Carlo result supports and reinforces the analytical Moran’s I test, showing that the clustering pattern is unlikely to have occurred by random chance.
+
+**Visualise Moran's I Test**
+
+```{r}
+mean_pm <- mean(bperm_pm$res[1:999])
+print(paste0("Mean of permutations: ", mean))
+
+var_pm <- var(bperm_pm$res[1:999])
+print(paste0("Variance: ", var))
+
+summary(bperm_pm$res[1:999])
+```
+
+```{r}
+perm_data_pm <- data.frame(moran_i = bperm_pm$res)
+
+ggplot(perm_data_pm, aes(x = moran_i)) +
+  geom_histogram(bins = 20, fill = "yellow", color = "#DCDCDC") +
+  geom_vline(xintercept = 0, color = "blue", linewidth = 0.5) +
+  geom_vline(xintercept = 0.10792, color = "red", linewidth = 0.5) +
+  labs(x = "Simulated Moran's I (Weekday PM)", y = "Frequency") +
+  theme(plot.background = element_rect("#D0DDD0"),
+        panel.background = element_rect(fill = "#D0DDD0"))
+```
+
+The red line on the far right represents the observed Moran’s I for weekday PM bus trips (≈ 0.108). Although lower than the AM peak value, this observed value still lies well outside the bulk of the simulated distribution, which is centered around zero (blue line). This indicates that the observed spatial pattern is stronger than what would be expected by chance.
+
+This visual evidence **supports the PM Moran’s I test and Monte Carlo p-value (0.001)**, confirming that **significant positive spatial autocorrelation** exists during the evening peak period. However, the clustering effect is **weaker than in the morning**, reflecting a more dispersed spatial distribution of passenger trips.
+
+## Weekend/Public holiday
+
+**Moran's I Test**
+
+```{r}
+moran.test(hexagon_all$WKD_TRIPS,
+           listw = rswm_q,
+           zero.policy = TRUE, na.action = na.omit)
+```
+
+**Insight**
+
+The Moran’s I statistic for weekend and public holiday trips is 0.235, with an expected value close to zero (–0.0012). The standard deviate of 10.078 and p-value \< 2.2 × 10⁻¹⁶ indicate that the observed value is far above what would be expected by random chance.
+
+This provides **very strong statistical evidence** to reject the null hypothesis, confirming that **spatial clustering is present during weekends and public holidays**. The Moran’s I value is **lower than AM peak (0.34)** but **higher than PM peak (0.108)**, meaning the **weekend clustering is moderate**—more pronounced than in the evening but less concentrated than morning commutes.
+
+This suggests that **weekend travel patterns are still spatially clustered**, likely reflecting popular leisure, shopping, and recreation areas, but with a more even distribution across the city compared to workday peaks.
+
+**Monte Carlo Moran's I**
+
+```{r}
+set.seed(1234)
+bperm_wkd = moran.mc(hexagon_all$WKD_TRIPS,
+                 listw = rswm_q,
+                 nsim = 999,
+                 zero.policy = TRUE, na.action = na.omit)
+bperm_wkd
+```
+
+The p-value of 0.001 provides strong evidence to reject the null hypothesis, confirming that **weekend and public holiday passenger trips exhibit significant spatial clustering**. This Monte Carlo result supports and reinforces the analytical Moran’s I test, indicating that the observed clustering pattern is highly unlikely to have occurred by random chance.
+
+**Visualise Moran's I Test**
+
+```{r}
+mean_wkd <- mean(bperm_wkd$res[1:999])
+print(paste0("Mean of permutations: ", mean))
+
+var_wkd <- var(bperm_wkd$res[1:999])
+print(paste0("Variance: ", var))
+
+summary(bperm_wkd$res[1:999])
+```
+
+```{r}
+perm_data_wkd <- data.frame(moran_i = bperm_wkd$res)
+
+ggplot(perm_data_wkd, aes(x = moran_i)) +
+  geom_histogram(bins = 20, fill = "#A376A2", color = "#DCDCDC") +
+  geom_vline(xintercept = 0, color = "blue", linewidth = 0.5) +
+  geom_vline(xintercept = 0.2349, color = "red", linewidth = 0.5) +
+  labs(x = "Simulated Moran's I (Weekend)", y = "Frequency") +
+  theme(plot.background = element_rect(fill = "#D0DDD0"),
+        panel.background = element_rect(fill = "#D0DDD0"))
+```
+
+The histogram of simulated Moran’s I values for weekend/public holiday trips shows that most of the simulated values cluster around zero (blue line), representing the expected result under random spatial distribution. The observed Moran’s I value of 0.235 (red line) lies far to the right of the simulated distribution, clearly outside the main peak.
+:::
+
+|  |  |  |  |  |
+|----|----|----|----|----|
+| **Time Period** | **Moran's I** | **p-value** | **Clustering Strength** | **Pattern Description** |
+| Weekday AM (6–9 AM) | 0.34 | \< 2.2e-16 | Strong | Concentrated commute flows from residential to key nodes |
+| Weekday PM (5–8 PM) | 0.10792 | 0.001 | Weak | More dispersed origins, staggered travel times |
+| Weekend/Public Holiday | 0.2349 | 0.001 | Moderate | Leisure-oriented flows, spread across multiple zones |
+
+The highest clustering occurs during weekday morning peak, driven by concentrated commuting flows. The weakest clustering is during weekday evenings, when trip origins are more scattered and travel behaviour is less synchronized. Weekends and public holidays show a moderate level of clustering, indicating strong but more spatially distributed travel demand.
+
+Clustering strength: **AM \> Weekend \> PM**.
 
 ```{r}
 
