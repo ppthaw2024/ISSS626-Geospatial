@@ -205,6 +205,22 @@ tm_shape(mrt_sf) +
 odbus <- read_csv("data/LTADataMall/origin_destination_bus_202508.csv")
 ```
 
+```{r}
+# Import and combine two months of bus data
+odbus_aug <- read_csv("data/LTADataMall/origin_destination_bus_202508.csv")
+odbus_sep <- read_csv("data/LTADataMall/origin_destination_bus_202509.csv")
+
+# Combine with month identifier
+odbus_combined <- bind_rows(
+  odbus_aug %>% mutate(MONTH = "2025-08", MONTH_NUM = 8),
+  odbus_sep %>% mutate(MONTH = "2025-09", MONTH_NUM = 9)
+) %>%
+  select(MONTH, MONTH_NUM, everything())
+
+cat("Combined dataset contains", nrow(odbus_combined), "records across", 
+    n_distinct(odbus_combined$MONTH), "months\n")
+```
+
 ##### 2.2.3.1 Visualise the Bus Stops
 
 ```{r}
@@ -305,8 +321,8 @@ We are only interested in ORIGIN_PT_CODE (trip origin).
 Only necessary columns are selected.
 
 ```{r}
-trips <- odbus %>%
-  select(c(ORIGIN_PT_CODE, DAY_TYPE, TIME_PER_HOUR, TOTAL_TRIPS)) %>%
+trips <- odbus_combined %>%
+  select(c(MONTH, MONTH_NUM,ORIGIN_PT_CODE, DAY_TYPE, TIME_PER_HOUR, TOTAL_TRIPS)) %>%
   rename(BUS_STOP_N = ORIGIN_PT_CODE) %>%
   rename(HOUR_OF_DAY = TIME_PER_HOUR) %>%
   rename(TRIPS = TOTAL_TRIPS)
@@ -1383,7 +1399,7 @@ p_values_map <- tm_shape(HCSA_AM_fdw) +
 tmap_arrange(Gi_star_map, p_values_map, asp=1, ncol=2)
 ```
 
-#### Local Gi\* of AM Weekday
+#### Local Gi\* of PM Weekday
 
 ```{r}
 #| echo: false 
@@ -1611,46 +1627,499 @@ HCSA_WKD_map
 
 Emerging Hot Spots Analysis (EHSA) is a spatio-temporal statistical technique that identifies and categorizes areas where clusters of high or low values of a phenomenon are developing, intensifying, or diminishing over time. 
 
-The analysis consist of four main steps:
-
--   Building a space-time cube,
-
--   Calculating Getis-Ord local Gi\* statistic for each bin by using an FDR correction,
-
--   Evaluating these hot and cold spot trends by using Mann-Kendall trend test,
-
--   Categorising each study area location by referring to the resultant trend z-score and p-value for each location with data, and with the hot spot z-score and p-value for each bin.
-
-::: panel-tabset
-## AM Weekday
-
-*Creating a Time Series Cube*
-
 ```{r}
+# Check the structure of your trips data
+glimpse(trips)
 
+# Let's create proper month numbering if it doesn't exist
+# Since you have August and September 2025 data
+trips_with_month <- trips %>%
+  mutate(
+    MONTH_NUM = case_when(
+      MONTH == "2025-08" ~ 1,
+      MONTH == "2025-09" ~ 2,
+      TRUE ~ NA_real_
+    )
+  ) %>%
+  filter(!is.na(MONTH_NUM))
+
+# Verify the month numbering
+table(trips_with_month$MONTH, trips_with_month$MONTH_NUM)
 ```
 
 ```{r}
 
 ```
 
-## PM Weekday
+#### 7.1 Create Space-Time Cubes
 
 ```{r}
+# Create monthly aggregated data for EHSA
+monthly_trips <- trips_with_month %>%
+  group_by(MONTH, MONTH_NUM, HEX_ID, DAY_TYPE) %>%
+  summarise(
+    AM_TRIPS = sum(TRIPS[HOUR_OF_DAY %in% c(6,7,8,9) & DAY_TYPE == "WEEKDAY"], na.rm = TRUE),
+    PM_TRIPS = sum(TRIPS[HOUR_OF_DAY %in% c(17,18,19,20) & DAY_TYPE == "WEEKDAY"], na.rm = TRUE),
+    WKD_TRIPS = sum(TRIPS[HOUR_OF_DAY %in% c(11:20) & DAY_TYPE == "WEEKENDS/HOLIDAY"], na.rm = TRUE),
+    .groups = 'drop'
+  )
 
+# Create space-time cubes for each time period
+create_spacetime_cube <- function(time_period) {
+  cube_data <- monthly_trips %>%
+    select(MONTH, MONTH_NUM, HEX_ID, !!sym(time_period)) %>%
+    rename(trips = !!sym(time_period)) %>%
+    filter(trips > 0) %>%  # Remove zeros for better analysis
+    arrange(HEX_ID, MONTH_NUM)
+  
+  # Join with hexagon geometry
+  cube_sf <- hexagon_all %>%
+    select(HEX_ID, geometry) %>%
+    inner_join(cube_data, by = "HEX_ID")
+  
+  return(cube_sf)
+}
+
+# Create cubes for each period
+am_cube <- create_spacetime_cube("AM_TRIPS")
+pm_cube <- create_spacetime_cube("PM_TRIPS")  
+wkd_cube <- create_spacetime_cube("WKD_TRIPS")
+
+# Check the cubes
+cat("AM Cube dimensions:", nrow(am_cube), "records across", n_distinct(am_cube$MONTH_NUM), "months\n")
+cat("PM Cube dimensions:", nrow(pm_cube), "records across", n_distinct(pm_cube$MONTH_NUM), "months\n")
+cat("Weekend Cube dimensions:", nrow(wkd_cube), "records across", n_distinct(wkd_cube$MONTH_NUM), "months\n")
 ```
 
-## Weekend
+#### 7.2 Calculate Gi\* Statistics Over Time
 
 ```{r}
+# Function to calculate Gi* for each time slice - FIXED
+calculate_gistar_timeseries <- function(cube_data) {
+  
+  # Get unique months
+  months <- unique(cube_data$MONTH_NUM)
+  
+  results <- list()
+  
+  for(month_idx in seq_along(months)) {
+    current_month <- months[month_idx]
+    
+    # Filter data for current month and drop geometry for joining
+    month_data <- cube_data %>% 
+      filter(MONTH_NUM == current_month) %>%
+      st_drop_geometry() %>%
+      select(HEX_ID, trips)
+    
+    # Start with hexagon geometry
+    complete_data <- hexagon_all %>%
+      select(HEX_ID, geometry) %>%
+      # Join with month data, filling missing with 0
+      left_join(month_data, by = "HEX_ID") %>%
+      mutate(trips = replace_na(trips, 0))
+    
+    # Calculate Gi* for this month
+    month_gistar <- complete_data %>%
+      mutate(
+        nb = st_contiguity(geometry),
+        wt = st_weights(nb, style = "W", allow_zero = TRUE),
+        gistar = local_gstar_perm(trips, nb, wt, nsim = 99)
+      ) %>%
+      unnest(gistar) %>%
+      mutate(MONTH_NUM = current_month)
+    
+    results[[as.character(month_idx)]] <- month_gistar
+  }
+  
+  # Combine all months
+  final_result <- bind_rows(results)
+  return(final_result)
+}
 
+# Now calculate Gi* time series for each period
+cat("Calculating AM Gi* time series...\n")
+am_gistar_ts <- calculate_gistar_timeseries(am_cube)
+
+cat("Calculating PM Gi* time series...\n")
+pm_gistar_ts <- calculate_gistar_timeseries(pm_cube)
+
+cat("Calculating Weekend Gi* time series...\n")
+wkd_gistar_ts <- calculate_gistar_timeseries(wkd_cube)
+
+# Check the results
+cat("AM Gi* time series:", nrow(am_gistar_ts), "records\n")
+cat("PM Gi* time series:", nrow(pm_gistar_ts), "records\n")
+cat("Weekend Gi* time series:", nrow(wkd_gistar_ts), "records\n")
+
+# Preview the results
+glimpse(am_gistar_ts)
+```
+
+#### 7.3  Perform EHSA Analysis
+
+```{r}
+# Perform simplified EHSA for 2 months
+perform_ehsa_simple <- function(gistar_ts) {
+  
+  # Calculate change between months
+  ehsa_results <- gistar_ts %>%
+    st_drop_geometry() %>%
+    select(HEX_ID, MONTH_NUM, gi_star, p_sim, cluster) %>%
+    group_by(HEX_ID) %>%
+    arrange(MONTH_NUM) %>%
+    summarise(
+      month1_gi = first(gi_star),
+      month2_gi = last(gi_star),
+      month1_sig = first(p_sim < 0.05),
+      month2_sig = last(p_sim < 0.05),
+      month1_cluster = first(cluster),
+      month2_cluster = last(cluster),
+      gi_change = month2_gi - month1_gi,
+      .groups = 'drop'
+    ) %>%
+    # Classify based on 2-month pattern
+    mutate(
+      ehsa_category = case_when(
+        # Intensifying: Was hot spot and becoming stronger
+        month1_sig & month2_sig & month1_cluster == "High" & month2_cluster == "High" & gi_change > 0 ~ "Intensifying",
+        # Emerging: Was not significant, now hot spot
+        !month1_sig & month2_sig & month2_cluster == "High" ~ "Emerging",
+        # Diminishing: Was hot spot, now weaker or not significant
+        month1_sig & month1_cluster == "High" & (!month2_sig | gi_change < 0) ~ "Diminishing",
+        # Persistent: Stable hot spot
+        month1_sig & month2_sig & month1_cluster == "High" & month2_cluster == "High" & abs(gi_change) < 0.5 ~ "Persistent",
+        # Sporadic: Inconsistent pattern
+        month1_sig != month2_sig ~ "Sporadic",
+        # Cold spot patterns (similar logic but for low clusters)
+        month1_sig & month2_sig & month1_cluster == "Low" & month2_cluster == "Low" & gi_change < 0 ~ "Intensifying Cold",
+        !month1_sig & month2_sig & month2_cluster == "Low" ~ "Emerging Cold",
+        month1_sig & month1_cluster == "Low" & (!month2_sig | gi_change > 0) ~ "Diminishing Cold",
+        month1_sig & month2_sig & month1_cluster == "Low" & month2_cluster == "Low" & abs(gi_change) < 0.5 ~ "Persistent Cold",
+        TRUE ~ "No Clear Pattern"
+      )
+    )
+  
+  return(ehsa_results)
+}
+
+# Perform EHSA for each time period
+cat("Performing EHSA for AM trips...\n")
+am_ehsa <- perform_ehsa_simple(am_gistar_ts)
+
+cat("Performing EHSA for PM trips...\n")
+pm_ehsa <- perform_ehsa_simple(pm_gistar_ts)
+
+cat("Performing EHSA for Weekend trips...\n")
+wkd_ehsa <- perform_ehsa_simple(wkd_gistar_ts)
+
+# Check results
+cat("AM EHSA categories:\n")
+table(am_ehsa$ehsa_category)
+
+cat("\nPM EHSA categories:\n")
+table(pm_ehsa$ehsa_category)
+
+cat("\nWeekend EHSA categories:\n")
+table(wkd_ehsa$ehsa_category)
 ```
 
 ```{r}
+# Function to create EHSA maps
+create_ehsa_map <- function(ehsa_data, title) {
+  # Join EHSA results with hexagon geometry
+  ehsa_sf <- hexagon_all %>%
+    inner_join(ehsa_data, by = "HEX_ID")
+  
+  # Define color scheme
+  tm_shape(mpsz_cl) +
+    tm_polygons(fill = "#FFF4EA", alpha = 0.3) +
+    tm_shape(ehsa_sf) +
+    tm_polygons(
+      fill = "ehsa_category",
+      fill.scale = tm_scale_categorical(
+        values = c(
+          "Intensifying" = "red",
+          "Emerging" = "orange", 
+          "Persistent" = "darkred",
+          "Diminishing" = "lightblue",
+          "Sporadic" = "yellow",
+          "Intensifying Cold" = "darkblue",
+          "Emerging Cold" = "blue",
+          "Persistent Cold" = "lightblue",
+          "Diminishing Cold" = "pink",
+          "No Clear Pattern" = "grey80"
+        )
+      ),
+      fill.legend = tm_legend(title = "EHSA Category", position = c("right", "bottom"))
+    ) +
+    tm_borders(lwd = 0.1) +
+    tm_layout(
+      main.title = title,
+      bg.color = "#D0DDD0",
+      frame = FALSE
+    )
+}
 
+# Create EHSA maps
+cat("Creating EHSA maps...\n")
+am_ehsa_map <- create_ehsa_map(am_ehsa, "EHSA - Weekday AM Trips (Aug-Sep 2025)")
+pm_ehsa_map <- create_ehsa_map(pm_ehsa, "EHSA - Weekday PM Trips (Aug-Sep 2025)") 
+wkd_ehsa_map <- create_ehsa_map(wkd_ehsa, "EHSA - Weekend Trips (Aug-Sep 2025)")
+
+# Display maps
+am_ehsa_map
+pm_ehsa_map  
+wkd_ehsa_map
 ```
-:::
+
+#### 7.4 EHSA Summary Statistics
 
 ```{r}
+# Create summary tables
+ehsa_summary <- function(ehsa_data, period_name) {
+  summary_table <- ehsa_data %>%
+    count(ehsa_category) %>%
+    mutate(percentage = round(n / sum(n) * 100, 1),
+           period = period_name) %>%
+    arrange(desc(n))
+  
+  return(summary_table)
+}
 
+# Combine summaries
+all_ehsa_summary <- bind_rows(
+  ehsa_summary(am_ehsa, "AM Weekday"),
+  ehsa_summary(pm_ehsa, "PM Weekday"),
+  ehsa_summary(wkd_ehsa, "Weekend")
+)
+
+# Display summary
+cat("EHSA Category Distribution:\n")
+kable(all_ehsa_summary, caption = "EHSA Category Distribution (2-Month Analysis)")
+
+# Cross-tabulation
+ehsa_crosstab <- all_ehsa_summary %>%
+  select(period, ehsa_category, n) %>%
+  pivot_wider(names_from = period, values_from = n, values_fill = 0)
+
+cat("\nEHSA Pattern Distribution Across Time Periods:\n")
+kable(ehsa_crosstab, caption = "EHSA Pattern Distribution Across Time Periods")
 ```
+
+#### 7.5 Key Locations Analysis
+
+```{r}
+# Identify key changing locations
+key_changes <- bind_rows(
+  am_ehsa %>% 
+    filter(ehsa_category %in% c("Intensifying", "Emerging", "Diminishing")) %>%
+    mutate(period = "AM"),
+  pm_ehsa %>% 
+    filter(ehsa_category %in% c("Intensifying", "Emerging", "Diminishing")) %>%
+    mutate(period = "PM"),
+  wkd_ehsa %>% 
+    filter(ehsa_category %in% c("Intensifying", "Emerging", "Diminishing")) %>%
+    mutate(period = "Weekend")
+)
+
+if(nrow(key_changes) > 0) {
+  cat("Key changing locations found:\n")
+  print(kable(key_changes))
+  
+  # Visualize these key locations
+  key_locations_sf <- hexagon_all %>%
+    inner_join(key_changes, by = "HEX_ID")
+  
+  key_changes_map <- tm_shape(mpsz_cl) +
+    tm_polygons(fill = "#FFF4EA", alpha = 0.3) +
+    tm_shape(key_locations_sf) +
+    tm_polygons(
+      fill = "ehsa_category",
+      fill.scale = tm_scale_categorical(
+        values = c("Intensifying" = "red", "Emerging" = "orange", "Diminishing" = "blue")
+      ),
+      fill.legend = tm_legend(title = "Key Changes")
+    ) +
+    tm_facets(by = "period", ncol = 1) +
+    tm_layout(
+      main.title = "Key Emerging Hot Spot Changes Across Periods",
+      bg.color = "#D0DDD0"
+    )
+  
+  print(key_changes_map)
+} else {
+  cat("No significant intensifying, emerging, or diminishing patterns detected in 2-month data.\n")
+}
+```
+
+#### 7.6 Temporal Trend Visualization
+
+```{r}
+# Plot time series for selected hexagons with interesting patterns
+interesting_categories <- c("Intensifying", "Emerging", "Diminishing")
+interesting_hexagons <- am_ehsa %>%
+  filter(ehsa_category %in% interesting_categories) %>%
+  pull(HEX_ID)
+
+# If we have interesting patterns, plot them
+if(length(interesting_hexagons) > 0) {
+  
+  # Select top 6 for visualization
+  plot_hexagons <- head(interesting_hexagons, 6)
+  
+  # Prepare plot data
+  trend_plot_data <- am_gistar_ts %>%
+    filter(HEX_ID %in% plot_hexagons) %>%
+    st_drop_geometry() %>%
+    select(HEX_ID, MONTH_NUM, gi_star, p_sim, cluster) %>%
+    left_join(am_ehsa %>% select(HEX_ID, ehsa_category), by = "HEX_ID") %>%
+    mutate(
+      Month = case_when(
+        MONTH_NUM == 1 ~ "August",
+        MONTH_NUM == 2 ~ "September"
+      ),
+      Month = factor(Month, levels = c("August", "September")),
+      significant = p_sim < 0.05
+    )
+  
+  # Create trend plot
+  trend_plot <- ggplot(trend_plot_data, aes(x = Month, y = gi_star, group = HEX_ID, color = ehsa_category)) +
+    geom_line(size = 1.2) +
+    geom_point(aes(shape = significant), size = 3) +
+    geom_text(aes(label = ifelse(significant, cluster, "")), 
+              vjust = -1, size = 3, color = "black") +
+    facet_wrap(~HEX_ID, scales = "free_y", ncol = 2) +
+    labs(
+      title = "Gi* Statistic Trends for Selected Hexagons (AM Peak)",
+      subtitle = "Labels show cluster type (High/Low) when statistically significant (p < 0.05)",
+      x = "Month",
+      y = "Gi* Statistic",
+      color = "EHSA Category",
+      shape = "Statistically\nSignificant"
+    ) +
+    theme_minimal() +
+    scale_color_manual(values = c("Intensifying" = "red", 
+                                 "Emerging" = "orange",
+                                 "Diminishing" = "blue")) +
+    scale_shape_manual(values = c("TRUE" = 16, "FALSE" = 1)) +
+    theme(
+      panel.grid.major = element_line(color = "grey80"),
+      panel.grid.minor = element_blank(),
+      strip.background = element_rect(fill = "lightblue", color = "grey50")
+    )
+  
+  print(trend_plot)
+  
+} else {
+  cat("No intensifying, emerging, or diminishing patterns to plot.\n")
+}
+```
+
+#### 7.7 Comparative EHSA Analysis
+
+```{r}
+# Create a comprehensive comparison table
+ehsa_comparison <- bind_rows(
+  am_ehsa %>% mutate(period = "AM Peak") %>% select(HEX_ID, period, ehsa_category),
+  pm_ehsa %>% mutate(period = "PM Peak") %>% select(HEX_ID, period, ehsa_category),
+  wkd_ehsa %>% mutate(period = "Weekend") %>% select(HEX_ID, period, ehsa_category)
+) %>%
+  pivot_wider(names_from = period, values_from = ehsa_category, values_fill = "No Clear Pattern")
+
+cat("EHSA Pattern Comparison Across Time Periods:\n")
+kable(head(ehsa_comparison, 10), caption = "Sample of Hexagon EHSA Patterns Across Time Periods")
+
+# Count patterns by period
+pattern_summary <- ehsa_comparison %>%
+  summarise(
+    `AM Intensifying/Emerging` = sum(`AM Peak` %in% c("Intensifying", "Emerging")),
+    `PM Intensifying/Emerging` = sum(`PM Peak` %in% c("Intensifying", "Emerging")),
+    `Weekend Intensifying/Emerging` = sum(`Weekend` %in% c("Intensifying", "Emerging")),
+    `AM Diminishing` = sum(`AM Peak` == "Diminishing"),
+    `PM Diminishing` = sum(`PM Peak` == "Diminishing"),
+    `Weekend Diminishing` = sum(`Weekend` == "Diminishing")
+  )
+
+cat("\nSummary of Key EHSA Patterns:\n")
+kable(pattern_summary, caption = "Count of Key EHSA Patterns by Time Period")
+```
+
+#### 7.8 EHSA Insights and Interpretation
+
+```{r}
+# Generate insights based on EHSA results
+cat("\n=== EHSA ANALYSIS INSIGHTS ===\n\n")
+
+# Overall patterns
+cat("1. OVERALL TEMPORAL PATTERNS:\n")
+cat("   Based on 2 months of data (Aug-Sep 2025), the EHSA reveals:\n")
+cat("   - AM Peak:", sum(am_ehsa$ehsa_category %in% c("Intensifying", "Emerging")), "areas showing growth\n")
+cat("   - PM Peak:", sum(pm_ehsa$ehsa_category %in% c("Intensifying", "Emerging")), "areas showing growth\n")  
+cat("   - Weekend:", sum(wkd_ehsa$ehsa_category %in% c("Intensifying", "Emerging")), "areas showing growth\n\n")
+
+# Key findings
+cat("2. KEY FINDINGS:\n")
+
+# AM patterns
+am_growth <- am_ehsa %>% filter(ehsa_category %in% c("Intensifying", "Emerging"))
+if(nrow(am_growth) > 0) {
+  cat("   - AM Commute: Growth detected in", nrow(am_growth), "locations\n")
+}
+
+# PM patterns  
+pm_growth <- pm_ehsa %>% filter(ehsa_category %in% c("Intensifying", "Emerging"))
+if(nrow(pm_growth) > 0) {
+  cat("   - PM Commute: Growth detected in", nrow(pm_growth), "locations\n")
+}
+
+# Weekend patterns
+wkd_growth <- wkd_ehsa %>% filter(ehsa_category %in% c("Intensifying", "Emerging"))
+if(nrow(wkd_growth) > 0) {
+  cat("   - Weekend Travel: Growth detected in", nrow(wkd_growth), "locations\n")
+}
+
+# Diminishing patterns
+am_decline <- am_ehsa %>% filter(ehsa_category == "Diminishing")
+pm_decline <- pm_ehsa %>% filter(ehsa_category == "Diminishing")  
+wkd_decline <- wkd_ehsa %>% filter(ehsa_category == "Diminishing")
+
+if(nrow(am_decline) + nrow(pm_decline) + nrow(wkd_decline) > 0) {
+  cat("   - Declining activity found in", nrow(am_decline) + nrow(pm_decline) + nrow(wkd_decline), "locations\n")
+}
+
+cat("\n3. PLANNING IMPLICATIONS:\n")
+cat("   - Monitor growing areas for potential service enhancements\n")
+cat("   - Investigate declining areas for underlying causes\n") 
+cat("   - Consider temporal variations in resource allocation\n")
+cat("   - Note: 2-month analysis provides initial insights; longer time series recommended for robust EHSA\n")
+```
+
+### **Transport Service Optimization**
+
+1.  **Resource Reallocation**: Shift capacity from "Diminishing" to "Intensifying/Emerging" areas
+
+2.  **Peak-Hour Strategy**: Different service patterns needed for AM vs PM peaks
+
+3.  **Weekend Services**: Enhanced connectivity to leisure destinations
+
+## 8. Conclusion
+
+This analysis of Singapore's bus network reveals a system characterized by strong, organized spatial patterns rather than random passenger distribution. The methodological approach, progressing from basic mapping to advanced statistical clustering, provides a clear and evidence-based understanding of urban mobility.
+
+**Key Findings from the Analytical Process:**
+
+1.  **Spatial Distribution Analysis (Hexagon Mapping):** The initial aggregation of bus stops into hexagonal zones provided a clear visual foundation. It immediately revealed that passenger demand is not uniform but concentrates in specific, identifiable areas across the island.
+
+2.  **Spatial Autocorrelation (Global and Local Moran's I):** Statistical testing confirmed that the observed clustering is significant and not random. The fact that areas of high demand are surrounded by other high-demand areas (and likewise for low-demand areas) confirms that passenger movements follow predictable spatial structures.
+
+3.  **Hot Spot Analysis (Getis-Ord Gi\*):** This technique successfully pinpointed the exact locations of statistically significant hotspots and cold spots. The alignment of these zones with known urban centers and transport nodes validates the current network design while highlighting areas of unexpected high or low usage.
+
+4.  **Emerging Hot Spot Analysis (EHSA):** By incorporating the time dimension, the study demonstrated how these clusters are evolving. The identification of "Intensifying," "Emerging," and "Diminishing" areas provides a dynamic view of demand shifts, crucial for forward-looking planning.
+
+**Interpretation and Strategic Implications:**
+
+The findings indicate that Singapore's bus network efficiently serves a spatially structured demand pattern. The clear distinction between weekday commute corridors and weekend leisure destinations underscores a successful alignment with the city's land-use patterns.
+
+From a planning perspective, the consistent identification of key clusters across multiple analytical methods offers a robust evidence base for decision-making. This enables a shift from reactive service adjustments to a more proactive and strategic approach. Resources can be prioritized with greater confidence, targeting investments and service enhancements toward zones of growing demand, while optimizing or re-allocating resources from areas of declining use.
+
+In conclusion, this multi-layered analytical framework transforms complex mobility data into actionable intelligence. It provides a reliable foundation for ensuring that Singapore's bus network continues to evolve in step with the changing needs of its population, enhancing both efficiency and service quality.
