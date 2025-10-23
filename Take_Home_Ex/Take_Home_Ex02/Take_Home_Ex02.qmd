@@ -8,6 +8,7 @@ execute:
   eval: true
   echo: true
   warning: false
+  message: false
   freeze: true
 ---
 
@@ -23,7 +24,7 @@ The analysis is structured in three sections:
     Passenger trips are aggregated into a hexagonal Traffic Analysis Zone (TAZ) framework to build a clear spatial representation of mobility intensity during weekday morning, weekday evening, and weekend periods. This foundational layer visualises baseline travel flows and spatial distribution patterns across the island.
 
 -   **Spatial Clustering**\
-    To detect localised patterns of demand, the study applies Local Measures of Spatial Autocorrelation (LMSA) — including *Local Moran’s I*, *Geary’s C*, and *Getis-Ord Gi\** — to identify statistically significant hotspots, coldspots, and outlier areas of bus ridership.
+    To detect localised patterns of demand, the study applies Local Measures of Spatial Autocorrelation (LMSA) — including *Local Moran’s I*,
 
 -   **Temporal Trend Analysis**\
     To examine how these clusters evolve, Emerging Hot Spot Analysis (EHSA) integrates the Gi\* statistic with the Mann-Kendall trend test, classifying clusters as emerging, intensifying, diminishing, or sporadic over time. This captures the dynamic dimension of urban mobility.
@@ -61,7 +62,7 @@ The following R packages are used:
 
 ```{r}
 
-pacman::p_load(tidyverse, sf, spdep, sfdep, knitr,tmap, rvest, patchwork)
+pacman::p_load(tidyverse, sf, spdep, sfdep, knitr,tmap, rvest, patchwork,plotly, Kendall)
 ```
 
 ### 2.2 Importing Data
@@ -1054,7 +1055,7 @@ The histogram of simulated Moran’s I values for weekend/public holiday trips s
 :::
 
 |  |  |  |  |  |
-|----|----|----|----|----|
+|---------------|---------------|---------------|---------------|---------------|
 | **Time Period** | **Moran's I** | **p-value** | **Clustering Strength** | **Pattern Description** |
 | Weekday AM (6–9 AM) | 0.34 | \< 2.2e-16 | Strong | Concentrated commute flows from residential to key nodes |
 | Weekday PM (5–8 PM) | 0.10792 | 0.001 | Weak | More dispersed origins, staggered travel times |
@@ -1063,6 +1064,592 @@ The histogram of simulated Moran’s I values for weekend/public holiday trips s
 The highest clustering occurs during weekday morning peak, driven by concentrated commuting flows. The weakest clustering is during weekday evenings, when trip origins are more scattered and travel behaviour is less synchronized. Weekends and public holidays show a moderate level of clustering, indicating strong but more spatially distributed travel demand.
 
 Clustering strength: **AM \> Weekend \> PM**.
+
+## 5. Local Spatial Autocorrelation (LISA)
+
+The Global measures of spatial autocorrelation suggests that all three study periods have clustering spatial patterns. We will now use Local Measures of Spatial Autocorrelation to compute the statistic of the passenger trips, and understand where the significant clusters are located by displaying the LMSA maps.
+
+Below we will continue to use spdep to compute Local Moran's I statistic.
+
+### 5.2.1 Computing Contiguity Spatial Weights
+
+```{r}
+hexagon_clean <- hexagon_all %>%
+  mutate(nb = st_contiguity(geometry),
+         wt = st_weights(nb, style = "W",
+                         , allow_zero = TRUE),
+         .before = 1) 
+
+```
+
+```{r}
+summary(hexagon_clean$nb)
+```
+
+Based on the summary report, we understand that there is one hexagon area, HexID = 826, without any neighbors. We will filter this neighbour out to process futher LMSA statistic and analysis as it cannot create any weights.
+
+### 5.2.2 Computing Local Moran's I
+
+``` r
+install.packages("remotes")
+remotes::install_github("JosiahParry/sfdep")
+```
+
+```{r}
+# Remove by HEX_ID
+hexagon_clean_ft <- hexagon_all %>%
+  filter(HEX_ID != "H0826") 
+```
+
+```{r}
+# Recreate nb and wt
+hexagon_clean_ft <- hexagon_clean_ft %>%
+  mutate(
+    nb = st_contiguity(geometry),
+    wt = st_weights(nb, style = "W")
+  )
+```
+
+::: panel-tabset
+## Weekday AM
+
+```{r}
+#| eval: false
+set.seed(1234)
+lisa_am <- hexagon_clean_ft %>%
+  mutate(local_moran = local_moran(
+    AM_TRIPS, nb, wt, nsim = 99
+  ), .before = 1) %>%
+  unnest(local_moran)
+
+write_rds(lisa_am, "data/rds/lisa_am.rds")
+```
+
+```{r}
+lisa_am <- read_rds("data/rds/lisa_am.rds")
+```
+
+```{r}
+glimpse(lisa_am)
+```
+
+```{r}
+#| fig-width: 12
+# AM Local Moran's I
+lmsa_am <- tm_shape(mpsz_cl) +
+  tm_polygons(fill = "#FFF4EA", fill_alpha = 0.3) +
+#  tm_text("SUBZONE_N", size = 0.5) +
+tm_shape(lisa_am) +
+  tm_polygons(fill = "ii",
+              fill.scale = tm_scale_intervals(
+                style = "pretty",
+                n = 5,
+                values = "-brewer.RdBu"), 
+                fill_alpha = 0.7,
+              fill.legend = tm_legend(
+                title = "Local Moran's I")) + 
+  tm_borders(fill_alpha = 0.5) +
+  tm_title("LISA Map - Local Moran's I AM Weekday Trips") +
+  tm_layout(
+    legend.position = c("right", "bottom"),
+    bg.color = "#D0DDD0")
+
+#Local Moran's I p-value
+lmsa_am_p <- tm_shape(mpsz_cl) +
+  tm_polygons(fill = "#FFF4EA", fill_alpha = 0.3) +
+tm_shape(lisa_am) +
+  tm_polygons(fill = "p_ii", 
+              fill.scale = tm_scale_intervals(
+                breaks = c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf),
+                values = "-brewer.Reds"),
+              fill.legend = tm_legend(
+                title = "p-value")) + 
+  tm_borders(fill_alpha = 0.5) +
+  tm_title("LISA Map - p-values of Local Moran's I AM Weekday Trips") +
+  tm_layout(legend.position = c("right", "bottom"),
+            bg.color = "#D0DDD0")
+lmsa_am
+lmsa_am_p
+```
+
+## Weekday PM
+
+```{r}
+#| eval: false
+set.seed(1234)
+lisa_pm <- hexagon_clean_ft %>%
+  mutate(local_moran = local_moran(
+    PM_TRIPS, nb, wt, nsim = 99
+  ), .before = 1) %>%
+  unnest(local_moran)
+
+write_rds(lisa_pm, "data/rds/lisa_pm.rds")
+```
+
+```{r}
+lisa_pm <- read_rds("data/rds/lisa_pm.rds")
+```
+
+```{r}
+glimpse(lisa_pm)
+```
+
+```{r}
+#| fig-width: 12
+# PM Local Moran's I
+lmsa_pm <- tm_shape(mpsz_cl) +
+  tm_polygons(fill = "#FFF4EA", fill_alpha = 0.3) +
+#  tm_text("SUBZONE_N", size = 0.5) +
+tm_shape(lisa_pm) +
+  tm_polygons(fill = "ii",
+              fill.scale = tm_scale_intervals(
+                style = "pretty",
+                n = 5,
+                values = "-brewer.RdBu"), 
+                fill_alpha = 0.7,
+              fill.legend = tm_legend(
+                title = "Local Moran's I")) + 
+  tm_borders(fill_alpha = 0.5) +
+  tm_title("LISA Map - Local Moran's I PM Weekday Trips") +
+  tm_layout(
+    legend.position = c("right", "bottom"),
+    bg.color = "#D0DDD0")
+
+#Local Moran's I p-value
+lmsa_pm_p <- tm_shape(mpsz_cl) +
+  tm_polygons(fill = "#FFF4EA", fill_alpha = 0.3) +
+tm_shape(lisa_pm) +
+  tm_polygons(fill = "p_ii", 
+              fill.scale = tm_scale_intervals(
+                breaks = c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf),
+                values = "-brewer.Reds"),
+              fill.legend = tm_legend(
+                title = "p-value")) + 
+  tm_borders(fill_alpha = 0.5) +
+  tm_title("LISA Map - p-values of Local Moran's I PM Weeday Trips") +
+  tm_layout(legend.position = c("right", "bottom"),
+            bg.color = "#D0DDD0")
+lmsa_pm
+lmsa_pm_p
+```
+
+## Weedkend/PH
+
+```{r}
+#| eval: false
+set.seed(1234)
+lisa_wkd <- hexagon_clean_ft %>%
+  mutate(local_moran = local_moran(
+    WKD_TRIPS, nb, wt, nsim = 99
+  ), .before = 1) %>%
+  unnest(local_moran)
+
+write_rds(lisa_wkd, "data/rds/lisa_wkd.rds")
+```
+
+```{r}
+lisa_wkd <- read_rds("data/rds/lisa_wkd.rds")
+```
+
+```{r}
+glimpse(lisa_wkd)
+```
+
+```{r}
+#| fig-width: 12
+# Weekend Local Moran's I
+lmsa_wkd <- tm_shape(mpsz_cl) +
+  tm_polygons(fill = "#FFF4EA", fill_alpha = 0.3) +
+#  tm_text("SUBZONE_N", size = 0.5) +
+tm_shape(lisa_wkd) +
+  tm_polygons(fill = "ii",
+              fill.scale = tm_scale_intervals(
+                style = "pretty",
+                n = 5,
+                values = "-brewer.RdBu"), 
+                fill_alpha = 0.7,
+              fill.legend = tm_legend(
+                title = "Local Moran's I")) + 
+  tm_borders(fill_alpha = 0.5) +
+  tm_title("LISA Map - Local Moran's I Weekend Trips") +
+  tm_layout(
+    legend.position = c("right", "bottom"),
+    bg.color = "#D0DDD0")
+
+#Local Moran's I p-value
+lmsa_wkd_p <- tm_shape(mpsz_cl) +
+  tm_polygons(fill = "#FFF4EA", fill_alpha = 0.3) +
+tm_shape(lisa_wkd) +
+  tm_polygons(fill = "p_ii", 
+              fill.scale = tm_scale_intervals(
+                breaks = c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf),
+                values = "-brewer.Reds"),
+              fill.legend = tm_legend(
+                title = "p-value")) + 
+  tm_borders(fill_alpha = 0.5) +
+  tm_title("LISA Map - p-values of Local Moran's I Weekend Trips") +
+  tm_layout(legend.position = c("right", "bottom"),
+            bg.color = "#D0DDD0")
+lmsa_wkd
+lmsa_wkd_p
+
+```
+:::
+
+| Time Period | Spatial Pattern | Cluster Strength | Key Hotspot Characteristics |
+|------------------|------------------|------------------|------------------|
+| **Weekday AM** | Highly clustered | Strong | Residential to employment corridors; strong central & regional nodes |
+| **Weekday PM** | Moderately dispersed | Weak | Fewer concentrated hotspots; scattered evening activity |
+| **Weekend/Public Holiday** | Re-emerging clusters | Moderate | Leisure, shopping, and recreational zones become dominant |
+
+### 5.3 Hot Spot/ Cold Spot Analysis
+
+Hot spots and cold spots analysis is a technique used in spatial statistics to identify statistically significant clusters of high values (hot spots) and low values (cold spots) of a geographically referenced attribute . These analyses help visualize and understand spatial patterns, revealing areas where data points are clustered more densely than would be expected by random chance.
+
+```{r}
+ct <- critical_threshold(st_geometry(hexagon_all))
+ct
+```
+
+The summary report shows that the largest first nearest neighbour distance is 2km, so using this as the upper threshold gives certainty that all units will have at least one neighbour.
+
+#### Fixed Distance Weights
+
+```{r}
+fdw <- hexagon_all %>% 
+  mutate(nb = include_self(
+    st_dist_band(
+      st_geometry(geometry), 
+                 upper = ct)),
+    wt = st_weights(nb, 
+                      style = "W"),
+    .before = 1) 
+```
+
+#### Adaptive Distance Weights
+
+```{r}
+adw <- hexagon_all %>%
+  mutate(nb = include_self(
+    st_knn(
+      st_geometry(geometry),
+      k = 6)),
+    wt = st_weights(
+      nb, style = "W"),
+    .before = 1)
+```
+
+#### Computing Local Gi\* and Visualising
+
+Local Gi\* (pronounced “G-i-star”) is a Getis-Ord statistic used in spatial analysis to identify statistically significant hot spots and cold spots of high or low attribute values within a dataset. 
+
+#### Local Gi\* of AM Weekday
+
+```{r}
+HCSA_AM_fdw <- fdw %>%
+  mutate(
+    gistar = local_gstar_perm(
+      AM_TRIPS, nb, wt, nsim = 99),
+    .before = 1) %>%
+  unnest(gistar)
+```
+
+```{r}
+Gi_star_map <-  tm_shape(HCSA_AM_fdw) +
+  tm_polygons(fill = "gi_star",
+              fill.scale = tm_scale_intervals(
+                style = "pretty",
+                n = 5,
+                values = "-brewer.rd_bu"),
+              fill.legend = tm_legend(
+                title = "local Gi*",
+                position = tm_pos_in(
+                  "left", "bottom"))) + 
+  tm_borders(fill_alpha = 0.5) +
+  tm_title("Local Gi* of AM Weekday Trips")
+
+p_values_map <- tm_shape(HCSA_AM_fdw) +
+  tm_polygons(fill = "p_sim", 
+              fill.scale = tm_scale_intervals(
+                breaks = c(0, 0.001, 0.01, 0.05, 0.1, 1),
+                values = "-brewer.reds"),
+              fill.legend = tm_legend(
+                title = "p-value",
+      position = tm_pos_in("left", "bottom")
+    )) + 
+  tm_borders(fill_alpha = 0.5) +
+  tm_title("p-values of local Gi* of AM Weekday Trips (fixed distance)")
+
+tmap_arrange(Gi_star_map, p_values_map, asp=1, ncol=2)
+```
+
+#### Local Gi\* of AM Weekday
+
+```{r}
+#| echo: false 
+ HCSA_PM_fdw <- fdw %>%
+  mutate(
+    gistar = local_gstar_perm(
+      PM_TRIPS, nb, wt, nsim = 99),
+    .before = 1) %>%
+  unnest(gistar)
+```
+
+```{r}
+#| echo: false 
+Gi_star_map <- tm_shape(HCSA_PM_fdw) +
+  tm_polygons(fill = "gi_star",
+              fill.scale = tm_scale_intervals(
+                style = "pretty",
+                n = 5,
+                values = "-brewer.rd_bu"),
+              fill.legend = tm_legend(
+                title = "local Gi*",
+                position = tm_pos_in(
+                  "left", "bottom"))) + 
+  tm_borders(fill_alpha = 0.5) +
+  tm_title("Local Gi* of PM Weekday Trips")
+
+p_values_map <- tm_shape(HCSA_PM_fdw) +
+  tm_polygons(fill = "p_sim", 
+              fill.scale = tm_scale_intervals(
+                breaks = c(0, 0.001, 0.01, 0.05, 0.1, 1),
+                values = "-brewer.reds"),
+              fill.legend = tm_legend(
+                title = "p-value",
+      position = tm_pos_in("left", "bottom")
+    )) + 
+  tm_borders(fill_alpha = 0.5) +
+  tm_title("p-values of local Gi* of PM Weekday Trips (fixed distance)")
+
+tmap_arrange(Gi_star_map, p_values_map, asp=1, ncol=2)
+```
+
+#### Local Gi\* of Weekend
+
+```{r}
+ #| echo: false 
+ HCSA_WKD_fdw <- fdw %>%
+  mutate(
+    gistar = local_gstar_perm(
+      WKD_TRIPS, nb, wt, nsim = 99),
+    .before = 1) %>%
+  unnest(gistar)
+```
+
+```{r}
+#| echo: false 
+Gi_star_map <- tm_shape(HCSA_WKD_fdw) +
+  tm_polygons(fill = "gi_star",
+              fill.scale = tm_scale_intervals(
+                style = "pretty",
+                n = 5,
+                values = "-brewer.rd_bu"),
+              fill.legend = tm_legend(
+                title = "local Gi*",
+                position = tm_pos_in(
+                  "left", "bottom"))) + 
+  tm_borders(fill_alpha = 0.5) +
+  tm_title("Local Gi* of Weekend Trips")
+
+p_values_map <- tm_shape(HCSA_WKD_fdw) +
+  tm_polygons(fill = "p_sim", 
+              fill.scale = tm_scale_intervals(
+                breaks = c(0, 0.001, 0.01, 0.05, 0.1, 1),
+                values = "-brewer.reds"),
+              fill.legend = tm_legend(
+                title = "p-value",
+      position = tm_pos_in("left", "bottom")
+    )) + 
+  tm_borders(fill_alpha = 0.5) +
+  tm_title("p-values of local Gi* of Weekend Trips (fixed distance)")
+
+tmap_arrange(Gi_star_map, p_values_map, asp=1, ncol=2)
+```
+
+### 6. HCSA Map Plotting
+
+#### HCSA of AM Weekday
+
+```{r}
+HCSA_AM_fdw <- HCSA_AM_fdw %>%
+  mutate(HCSA_cluster = case_when(
+    p_sim > 0.05 ~ "Insignificant",
+    p_sim <= 0.05 & cluster == "High" ~ "Hot spot",
+    p_sim <= 0.05 & cluster == "Low"  ~ "Cold spot",
+    TRUE ~ "Other"),
+    HCSA_cluster = factor(
+      HCSA_cluster,
+      levels = c("Insignificant", "Hot spot", "Cold spot")
+    ),
+    .before = 1
+  )
+```
+
+```{r}
+HCSA_AM_map <- tm_shape(HCSA_AM_fdw) + 
+  tm_polygons(
+    fill = "HCSA_cluster",
+    fill.scale = tm_scale_categorical(
+      values = c(
+        "grey80",      # Insignificant
+        "red",        # Low-Low
+        "blue"          # High-High
+      )
+    ),
+    fill.legend = tm_legend(
+      title = "HSCA Cluster",
+      position = tm_pos_in("left", "bottom"))
+  ) +
+  tm_borders() +
+  tm_title("HCSA Clusters of AM Weekday (p < 0.05)")
+HCSA_AM_map
+```
+
+#### HCSA of PM Weekday
+
+```{r}
+#| echo: false 
+HCSA_PM_fdw <- HCSA_PM_fdw %>%
+  mutate(HCSA_cluster = case_when(
+    p_sim > 0.05 ~ "Insignificant",
+    p_sim <= 0.05 & cluster == "High" ~ "Hot spot",
+    p_sim <= 0.05 & cluster == "Low"  ~ "Cold spot",
+    TRUE ~ "Other"),
+    HCSA_cluster = factor(
+      HCSA_cluster,
+      levels = c("Insignificant", "Hot spot", "Cold spot")
+    ),
+    .before = 1
+  )
+```
+
+```{r}
+#| echo: false 
+HCSA_PM_map <- tm_shape(HCSA_PM_fdw) + 
+  tm_polygons(
+    fill = "HCSA_cluster",
+    fill.scale = tm_scale_categorical(
+      values = c(
+        "grey80",      # Insignificant
+        "red",        # Low-Low
+        "blue"          # High-High
+      )
+    ),
+    fill.legend = tm_legend(
+      title = "HSCA Cluster",
+      position = tm_pos_in("left", "bottom"))
+  ) +
+  tm_borders() +
+  tm_title("HCSA Clusters of PM Weekday (p < 0.05)")
+HCSA_PM_map
+```
+
+#### HCSA of Weekend
+
+```{r}
+#| echo: false 
+HCSA_WKD_fdw <- HCSA_WKD_fdw %>%
+  mutate(HCSA_cluster = case_when(
+    p_sim > 0.05 ~ "Insignificant",
+    p_sim <= 0.05 & cluster == "High" ~ "Hot spot",
+    p_sim <= 0.05 & cluster == "Low"  ~ "Cold spot",
+    TRUE ~ "Other"),
+    HCSA_cluster = factor(
+      HCSA_cluster,
+      levels = c("Insignificant", "Hot spot", "Cold spot")
+    ),
+    .before = 1
+  )
+```
+
+```{r}
+#| echo: false 
+HCSA_WKD_map <- tm_shape(HCSA_WKD_fdw) + 
+  tm_polygons(
+    fill = "HCSA_cluster",
+    fill.scale = tm_scale_categorical(
+      values = c(
+        "grey80",      # Insignificant
+        "red",        # Low-Low
+        "blue"          # High-High
+      )
+    ),
+    fill.legend = tm_legend(
+      title = "HSCA Cluster",
+      position = tm_pos_in("left", "bottom"))
+  ) +
+  tm_borders() +
+  tm_title("HCSA Clusters of Weekend (p < 0.05)")
+HCSA_WKD_map
+```
+
+#### Hot Spot and Cold Spot Analysis (HCSA) Summary
+
+-   **Weekday AM (6–9 AM)**\
+    Hot spots are strongly concentrated in Orchard–Novena, Woodlands–Yishun, Tampines–Bedok, and Jurong East, reflecting intense commuter flows from residential to employment areas. Cold spots occur mainly along Tuas, northern fringes, and green buffer zones, indicating low activity.
+
+-   **Weekday PM (5–8 PM)**\
+    Hot spots become fewer and more scattered, with smaller clusters around Tampines, Woodlands, and western interchanges. Cold spots expand across the West and North, showing dispersed evening travel and less concentrated demand.
+
+-   **Weekend / Public Holiday (11 AM–8 PM)**\
+    Hot spots reappear at Downtown Core, Tampines, HarbourFront–Sentosa, and Jurong East, driven by leisure and retail trips. Cold spots remain stable in industrial and low-density zones.
+
+-   Overall, AM peaks show the **strongest clustering** (commuting), PM peaks are **more dispersed**, and weekends reflect **leisure-oriented movement**.
+
+#### **Implication for Transport Planning:**
+
+-   **AM peak** requires targeted capacity allocation on routes serving **residential → employment corridors**
+
+-   **PM peak** may benefit from **more flexible or demand-responsive services**.
+
+-   **Weekend planning** should emphasize connectivity to **leisure and retail destinations** rather than traditional commute hubs.
+
+-   Persistent **cold spots** can be used to optimize route coverage or evaluate the feasibility of alternative services.
+
+## 7. Emerging Hot Spot Analysis (EHSA)
+
+Emerging Hot Spots Analysis (EHSA) is a spatio-temporal statistical technique that identifies and categorizes areas where clusters of high or low values of a phenomenon are developing, intensifying, or diminishing over time. 
+
+The analysis consist of four main steps:
+
+-   Building a space-time cube,
+
+-   Calculating Getis-Ord local Gi\* statistic for each bin by using an FDR correction,
+
+-   Evaluating these hot and cold spot trends by using Mann-Kendall trend test,
+
+-   Categorising each study area location by referring to the resultant trend z-score and p-value for each location with data, and with the hot spot z-score and p-value for each bin.
+
+::: panel-tabset
+## AM Weekday
+
+*Creating a Time Series Cube*
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+## PM Weekday
+
+```{r}
+
+```
+
+## Weekend
+
+```{r}
+
+```
+
+```{r}
+
+```
+:::
 
 ```{r}
 
