@@ -1062,5 +1062,82 @@
     "title": "Hands-on Exercise 8",
     "section": "",
     "text": "set.seed(1234)\ngwRF_adaptive &lt;- grf(\n  formula = resale_price ~ floor_area_sqm +\n    storey_order + remaining_lease_mths + \n    PROX_CBD + PROX_ELDERLYCARE + \n    PROX_HAWKER + PROX_MRT + PROX_PARK + \n    PROX_MALL + PROX_SUPERMARKET +\n    WITHIN_350M_KINDERGARTEN +\n    WITHIN_350M_CHILDCARE + \n    WITHIN_350M_BUS + WITHIN_1KM_PRISCH,\n  dframe=train_data_nogeom, \n  bw=40,\n  kernel=\"adaptive\",\n  coords=coords_train)\n\nwrite_rds(gwRF_adaptive, \"data/model/gwRF_adaptive.rds\")\n\n\ngwRF_adaptive &lt;- read_rds(\"data/model/gwRF_adaptive.rds\")"
+  },
+  {
+    "objectID": "In_Class_Ex/In_Class_Ex09/In_Class_Ex09.html",
+    "href": "In_Class_Ex/In_Class_Ex09/In_Class_Ex09.html",
+    "title": "Hands-on Exercise 9: Modelling Geographical Accessibility",
+    "section": "",
+    "text": "This hands-on exercise is about how to model geographical accessibility by using R’s geospatial analysis packages.\n\n\n\nto computer accessibility measure by using Hansen’s potential model and Spatial Accessibility Measure (SAM); and\nto visualise the accessibility measures by using tmap and ggplot2 packages."
+  },
+  {
+    "objectID": "In_Class_Ex/In_Class_Ex09/In_Class_Ex09.html#introduction",
+    "href": "In_Class_Ex/In_Class_Ex09/In_Class_Ex09.html#introduction",
+    "title": "Hands-on Exercise 9: Modelling Geographical Accessibility",
+    "section": "",
+    "text": "This hands-on exercise is about how to model geographical accessibility by using R’s geospatial analysis packages.\n\n\n\nto computer accessibility measure by using Hansen’s potential model and Spatial Accessibility Measure (SAM); and\nto visualise the accessibility measures by using tmap and ggplot2 packages."
+  },
+  {
+    "objectID": "In_Class_Ex/In_Class_Ex09/In_Class_Ex09.html#data",
+    "href": "In_Class_Ex/In_Class_Ex09/In_Class_Ex09.html#data",
+    "title": "Hands-on Exercise 9: Modelling Geographical Accessibility",
+    "section": "9.2 Data",
+    "text": "9.2 Data\nFour data sets will be used in this hands-on exercise, they are:\n\nMP14_SUBZONE_NO_SEA_PL: URA Master Plan 2014 subzone boundary GIS data. This data set is downloaded from data.gov.sg.\nhexagons: A 250m radius hexagons GIS data. This data set was created by using st_make_grid() of sf package. It is in ESRI shapefile format.\nELDERCARE: GIS data showing location of eldercare service. This data is downloaded from data.gov.sg. There are two versions. One in ESRI shapefile format. The other one in Google kml file format. For the purpose of this hands-on exercise, ESRI shapefile format is provided.\nOD_Matrix: a distance matrix in csv format. There are six fields in the data file."
+  },
+  {
+    "objectID": "In_Class_Ex/In_Class_Ex09/In_Class_Ex09.html#getting-started",
+    "href": "In_Class_Ex/In_Class_Ex09/In_Class_Ex09.html#getting-started",
+    "title": "Hands-on Exercise 9: Modelling Geographical Accessibility",
+    "section": "9.3 Getting Started",
+    "text": "9.3 Getting Started\n\npacman::p_load(tmap, SpatialAcc, sf, \n               ggstatsplot, reshape2,\n               tidyverse)"
+  },
+  {
+    "objectID": "In_Class_Ex/In_Class_Ex09/In_Class_Ex09.html#geospatial-data-wrangling",
+    "href": "In_Class_Ex/In_Class_Ex09/In_Class_Ex09.html#geospatial-data-wrangling",
+    "title": "Hands-on Exercise 9: Modelling Geographical Accessibility",
+    "section": "9.4 Geospatial Data Wrangling",
+    "text": "9.4 Geospatial Data Wrangling\n\n9.4.1 Importing geospatial data\n\nmpsz &lt;- st_read(dsn = \"data/geospatial\", layer = \"MP14_SUBZONE_NO_SEA_PL\")\n\nReading layer `MP14_SUBZONE_NO_SEA_PL' from data source \n  `C:\\ppthaw2024\\ISSS626-Geospatial\\In_Class_Ex\\In_Class_Ex09\\data\\geospatial' \n  using driver `ESRI Shapefile'\nSimple feature collection with 323 features and 15 fields\nGeometry type: MULTIPOLYGON\nDimension:     XY\nBounding box:  xmin: 2667.538 ymin: 15748.72 xmax: 56396.44 ymax: 50256.33\nProjected CRS: SVY21\n\n\n\nhexagons &lt;- st_read(dsn = \"data/geospatial\", layer = \"hexagons\") \n\nReading layer `hexagons' from data source \n  `C:\\ppthaw2024\\ISSS626-Geospatial\\In_Class_Ex\\In_Class_Ex09\\data\\geospatial' \n  using driver `ESRI Shapefile'\nSimple feature collection with 3125 features and 6 fields\nGeometry type: POLYGON\nDimension:     XY\nBounding box:  xmin: 2667.538 ymin: 21506.33 xmax: 50010.26 ymax: 50256.33\nProjected CRS: SVY21 / Singapore TM\n\n\n\neldercare &lt;- st_read(dsn = \"data/geospatial\", layer = \"ELDERCARE\") \n\nReading layer `ELDERCARE' from data source \n  `C:\\ppthaw2024\\ISSS626-Geospatial\\In_Class_Ex\\In_Class_Ex09\\data\\geospatial' \n  using driver `ESRI Shapefile'\nSimple feature collection with 120 features and 19 fields\nGeometry type: POINT\nDimension:     XY\nBounding box:  xmin: 14481.92 ymin: 28218.43 xmax: 41665.14 ymax: 46804.9\nProjected CRS: SVY21 / Singapore TM\n\n\n\n\n9.4.2 Updating CRS information\n\nmpsz &lt;- st_transform(mpsz, 3414)\neldercare &lt;- st_transform(eldercare, 3414)\nhexagons &lt;- st_transform(hexagons, 3414)\n\n\nst_crs(mpsz)\n\nCoordinate Reference System:\n  User input: EPSG:3414 \n  wkt:\nPROJCRS[\"SVY21 / Singapore TM\",\n    BASEGEOGCRS[\"SVY21\",\n        DATUM[\"SVY21\",\n            ELLIPSOID[\"WGS 84\",6378137,298.257223563,\n                LENGTHUNIT[\"metre\",1]]],\n        PRIMEM[\"Greenwich\",0,\n            ANGLEUNIT[\"degree\",0.0174532925199433]],\n        ID[\"EPSG\",4757]],\n    CONVERSION[\"Singapore Transverse Mercator\",\n        METHOD[\"Transverse Mercator\",\n            ID[\"EPSG\",9807]],\n        PARAMETER[\"Latitude of natural origin\",1.36666666666667,\n            ANGLEUNIT[\"degree\",0.0174532925199433],\n            ID[\"EPSG\",8801]],\n        PARAMETER[\"Longitude of natural origin\",103.833333333333,\n            ANGLEUNIT[\"degree\",0.0174532925199433],\n            ID[\"EPSG\",8802]],\n        PARAMETER[\"Scale factor at natural origin\",1,\n            SCALEUNIT[\"unity\",1],\n            ID[\"EPSG\",8805]],\n        PARAMETER[\"False easting\",28001.642,\n            LENGTHUNIT[\"metre\",1],\n            ID[\"EPSG\",8806]],\n        PARAMETER[\"False northing\",38744.572,\n            LENGTHUNIT[\"metre\",1],\n            ID[\"EPSG\",8807]]],\n    CS[Cartesian,2],\n        AXIS[\"northing (N)\",north,\n            ORDER[1],\n            LENGTHUNIT[\"metre\",1]],\n        AXIS[\"easting (E)\",east,\n            ORDER[2],\n            LENGTHUNIT[\"metre\",1]],\n    USAGE[\n        SCOPE[\"Cadastre, engineering survey, topographic mapping.\"],\n        AREA[\"Singapore - onshore and offshore.\"],\n        BBOX[1.13,103.59,1.47,104.07]],\n    ID[\"EPSG\",3414]]\n\n\n\n\n9.4.3 Cleaning and updating attribute fields of the geospatial data\n\neldercare &lt;- eldercare %&gt;%\n  select(fid, ADDRESSPOS) %&gt;%\n  mutate(capacity = 100)\n\n\nhexagons &lt;- hexagons %&gt;%\n  select(fid) %&gt;%\n  mutate(demand = 100)"
+  },
+  {
+    "objectID": "In_Class_Ex/In_Class_Ex09/In_Class_Ex09.html#apsaital-data-handling-and-wrangling",
+    "href": "In_Class_Ex/In_Class_Ex09/In_Class_Ex09.html#apsaital-data-handling-and-wrangling",
+    "title": "Hands-on Exercise 9: Modelling Geographical Accessibility",
+    "section": "9.5 Apsaital Data Handling and Wrangling",
+    "text": "9.5 Apsaital Data Handling and Wrangling\n\n9.5.1 Importing Distance Matrix\n\nODMatrix &lt;- read_csv(\"data/aspatial/OD_Matrix.csv\", skip = 0)\n\n\n\n9.5.2 Tidying distance matrix\nThe code chunk below uses spread() of tidyr package is used to transform the O-D matrix from a thin format into a fat format.\n\ndistmat &lt;- ODMatrix %&gt;%\n  select(origin_id, destination_id, total_cost) %&gt;%\n  spread(destination_id, total_cost)%&gt;%\n  select(c(-c('origin_id')))\n\nCurrently, the distance is measured in metre because SVY21 projected coordinate system is used. The code chunk below will be used to convert the unit f measurement from metre to kilometre.\n\ndistmat_km &lt;- as.matrix(distmat/1000)"
+  },
+  {
+    "objectID": "In_Class_Ex/In_Class_Ex09/In_Class_Ex09.html#modelling-and-visualising-accessibility-using-hansen-method",
+    "href": "In_Class_Ex/In_Class_Ex09/In_Class_Ex09.html#modelling-and-visualising-accessibility-using-hansen-method",
+    "title": "Hands-on Exercise 9: Modelling Geographical Accessibility",
+    "section": "9.6 Modelling and Visualising Accessibility using Hansen Method",
+    "text": "9.6 Modelling and Visualising Accessibility using Hansen Method\n\n9.6.1 Computing Hansen’s accessibility\nThe code chunk below calculates Hansen’s accessibility using ac() of SpatialAcc and data.frame() is used to save the output in a data frame called acc_Handsen.\n\nlibrary(SpatialAcc)\n\n\nD &lt;- distmat_km\nif (inherits(D, \"units\")) D &lt;- units::drop_units(D)\nD &lt;- as.matrix(D)\n\nstopifnot(length(hexagons$demand)   == nrow(D))  # origins\nstopifnot(length(eldercare$capacity) == ncol(D)) # destinations\n\nacc_Hansen &lt;- SpatialAcc::ac(\n  p      = hexagons$demand,      # demand (unused by Hansen but required)\n  n      = eldercare$capacity,   # supply\n  D      = D,                    # distance matrix\n  d0     = max(D, na.rm = TRUE), # dummy; Hansen ignores d0\n  power  = 2,\n  family = \"Hansen\"\n)\n\n\nacc_Hansen &lt;- as.matrix(acc_Hansen)\ncolnames(acc_Hansen) &lt;- \"accHansen\"\n\n\nacc_Hansen &lt;- as_tibble(acc_Hansen)\n\n\nhexagon_Hansen &lt;- bind_cols(hexagons, acc_Hansen)\n\none step only\nIn-Class Exercise 9\nTrying with power =0.5 to 2.5\n\npower = 0.5power =1power =1.5power = 2power = 2.5\n\n\n\nD &lt;- distmat_km\nif (inherits(D, \"units\")) D &lt;- units::drop_units(D)\nD &lt;- as.matrix(D)\n\nstopifnot(length(hexagons$demand)   == nrow(D))  # origins\nstopifnot(length(eldercare$capacity) == ncol(D)) # destinations\n\nacc_Hansen0.5 &lt;- SpatialAcc::ac(\n  p      = hexagons$demand,      # demand (unused by Hansen but required)\n  n      = eldercare$capacity,   # supply\n  D      = D,                    # distance matrix\n  d0     = max(D, na.rm = TRUE), # dummy; Hansen ignores d0\n  power  = 0.5,\n  family = \"Hansen\"\n)\n\n\nacc_Hansen0.5 &lt;- as.matrix(acc_Hansen0.5)\ncolnames(acc_Hansen0.5) &lt;- \"accHansen0.5\"\n\n\nacc_Hansen0.5 &lt;- as_tibble(acc_Hansen0.5)\n\n\nhexagon_Hansen0.5 &lt;- bind_cols(hexagons, acc_Hansen0.5)\n\n\n\n\nD &lt;- distmat_km\nif (inherits(D, \"units\")) D &lt;- units::drop_units(D)\nD &lt;- as.matrix(D)\n\nstopifnot(length(hexagons$demand)   == nrow(D))  # origins\nstopifnot(length(eldercare$capacity) == ncol(D)) # destinations\n\nacc_Hansen1 &lt;- SpatialAcc::ac(\n  p      = hexagons$demand,      # demand (unused by Hansen but required)\n  n      = eldercare$capacity,   # supply\n  D      = D,                    # distance matrix\n  d0     = max(D, na.rm = TRUE), # dummy; Hansen ignores d0\n  power  = 1,\n  family = \"Hansen\"\n)\n\n\nacc_Hansen1 &lt;- as.matrix(acc_Hansen1)\ncolnames(acc_Hansen1) &lt;- \"accHansen1\"\n\n\nacc_Hansen1 &lt;- as_tibble(acc_Hansen1)\n\n\nhexagon_Hansen1 &lt;- bind_cols(hexagons, acc_Hansen1)\n\n\n\n\nD &lt;- distmat_km\nif (inherits(D, \"units\")) D &lt;- units::drop_units(D)\nD &lt;- as.matrix(D)\n\nstopifnot(length(hexagons$demand)   == nrow(D))  # origins\nstopifnot(length(eldercare$capacity) == ncol(D)) # destinations\n\nacc_Hansen1.5 &lt;- SpatialAcc::ac(\n  p      = hexagons$demand,      # demand (unused by Hansen but required)\n  n      = eldercare$capacity,   # supply\n  D      = D,                    # distance matrix\n  d0     = max(D, na.rm = TRUE), # dummy; Hansen ignores d0\n  power  = 1.5,\n  family = \"Hansen\"\n)\n\n\nacc_Hansen1.5 &lt;- as.matrix(acc_Hansen1.5)\ncolnames(acc_Hansen1.5) &lt;- \"accHansen1.5\"\n\n\nacc_Hansen1.5 &lt;- as_tibble(acc_Hansen1.5)\n\n\nhexagon_Hansen1.5 &lt;- bind_cols(hexagons, acc_Hansen1.5)\n\n\n\n\nD &lt;- distmat_km\nif (inherits(D, \"units\")) D &lt;- units::drop_units(D)\nD &lt;- as.matrix(D)\n\nstopifnot(length(hexagons$demand)   == nrow(D))  # origins\nstopifnot(length(eldercare$capacity) == ncol(D)) # destinations\n\nacc_Hansen2 &lt;- SpatialAcc::ac(\n  p      = hexagons$demand,      # demand (unused by Hansen but required)\n  n      = eldercare$capacity,   # supply\n  D      = D,                    # distance matrix\n  d0     = max(D, na.rm = TRUE), # dummy; Hansen ignores d0\n  power  = 2,\n  family = \"Hansen\"\n)\n\n\nacc_Hansen2 &lt;- as.matrix(acc_Hansen2)\ncolnames(acc_Hansen2) &lt;- \"accHansen2\"\n\n\nacc_Hansen2 &lt;- as_tibble(acc_Hansen2)\n\n\nhexagon_Hansen2 &lt;- bind_cols(hexagons, acc_Hansen2)\n\n\n\n\nD &lt;- distmat_km\nif (inherits(D, \"units\")) D &lt;- units::drop_units(D)\nD &lt;- as.matrix(D)\n\nstopifnot(length(hexagons$demand)   == nrow(D))  # origins\nstopifnot(length(eldercare$capacity) == ncol(D)) # destinations\n\nacc_Hansen2.5 &lt;- SpatialAcc::ac(\n  p      = hexagons$demand,      # demand (unused by Hansen but required)\n  n      = eldercare$capacity,   # supply\n  D      = D,                    # distance matrix\n  d0     = max(D, na.rm = TRUE), # dummy; Hansen ignores d0\n  power  = 2.5,\n  family = \"Hansen\"\n)\n\n\nacc_Hansen2.5 &lt;- as.matrix(acc_Hansen2.5)\ncolnames(acc_Hansen2.5) &lt;- \"accHansen2.5\"\n\n\nacc_Hansen2.5 &lt;- as_tibble(acc_Hansen2.5)\n\n\nhexagon_Hansen2.5 &lt;- bind_cols(hexagons, acc_Hansen2.5)\n\n\n\n\n\n\n9.6.2 Visualising Hansen’s accessibility\nExtracting map extend\nFirstly, we will extract the extend of hexagons simple feature data frame by by using st_bbox() of sf package.\n\nmapex &lt;- st_bbox(hexagons)\n\nThe code chunk below uses a collection of mapping fucntions of tmap package to create a high cartographic quality accessibility to eldercare centre in Singapore.\n\ntm_shape(hexagon_Hansen,\n         bbox = mapex) + \n  tm_polygons(fill = \"accHansen\", \n              fill.scale = tm_scale_intervals(\n                style = \"quantile\",\n                n = 10,\n                values = \"brewer.blues\")) +\ntm_shape(eldercare) +\n  tm_dots(size = 0.3,\n          fill = \"red\",\n          col = \"black\") +\n  tm_title(\"Accessibility to eldercare: Hansen method\") +\n  tm_layout(frame = TRUE) +\n  tm_compass(type=\"8star\", size = 2) +\n  tm_scalebar() +\n  tm_grid(alpha = 0.2)"
+  },
+  {
+    "objectID": "In_Class_Ex/In_Class_Ex09/data/geospatial/hexagons.html",
+    "href": "In_Class_Ex/In_Class_Ex09/data/geospatial/hexagons.html",
+    "title": "ISSS26 Geospatial Coursework",
+    "section": "",
+    "text": "&lt;!DOCTYPE qgis PUBLIC ‘http://mrcc.com/qgis.dtd’ ‘SYSTEM’&gt;     dataset\n\n\n                 0 0     false"
+  },
+  {
+    "objectID": "Hands_on_Ex/Hands_on_Ex09/data/geospatial/hexagons.html",
+    "href": "Hands_on_Ex/Hands_on_Ex09/data/geospatial/hexagons.html",
+    "title": "ISSS26 Geospatial Coursework",
+    "section": "",
+    "text": "&lt;!DOCTYPE qgis PUBLIC ‘http://mrcc.com/qgis.dtd’ ‘SYSTEM’&gt;     dataset\n\n\n                 0 0     false"
+  },
+  {
+    "objectID": "Hands_on_Ex/Hands_on_Ex09/data/geospatial/ELDERCARE.html",
+    "href": "Hands_on_Ex/Hands_on_Ex09/data/geospatial/ELDERCARE.html",
+    "title": "ISSS26 Geospatial Coursework",
+    "section": "",
+    "text": "&lt;!DOCTYPE qgis PUBLIC ‘http://mrcc.com/qgis.dtd’ ‘SYSTEM’&gt;  ELDERCARE  ENG dataset\n\nELDERCARE\n\n                 0 0     false"
+  },
+  {
+    "objectID": "In_Class_Ex/In_Class_Ex09/data/geospatial/ELDERCARE.html",
+    "href": "In_Class_Ex/In_Class_Ex09/data/geospatial/ELDERCARE.html",
+    "title": "ISSS26 Geospatial Coursework",
+    "section": "",
+    "text": "&lt;!DOCTYPE qgis PUBLIC ‘http://mrcc.com/qgis.dtd’ ‘SYSTEM’&gt;  ELDERCARE  ENG dataset\n\nELDERCARE\n\n                 0 0     false"
   }
 ]
