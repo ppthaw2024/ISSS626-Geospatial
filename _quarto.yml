@@ -51,6 +51,9 @@ website:
         href: In_Class_Ex/In_Class_Ex08/In-Class_Ex08.html
       - text: "In-Class Exercise 9"
         href: In_Class_Ex/In_Class_Ex09/In_Class_Ex09.html
+      - text: "In-Class Exercise 10"
+        href: In_Class_Ex/In_Class_Ex10/In_Class_Ex10.html
+    
     
     
     
@@ -63,6 +66,9 @@ website:
         href: Take_Home_Ex/Take_Home_Ex01/Take_Home_Ex01.html
       - text: "Take-home Exercise 2"
         href: Take_Home_Ex/Take_Home_Ex02/Take_Home_Ex02.html
+      - text: "Take-home Exercise 3"
+        href: Take_Home_Ex/Take_Home_Ex03/Take_Home_Ex03.html
+      
     
       
     right:
